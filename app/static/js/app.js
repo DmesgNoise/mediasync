@@ -383,13 +383,14 @@ function wireSourceCard(card) {
             card.querySelectorAll(".source-library-checkbox:checked"),
         );
 
-        const libraryIds = checkedLibraries.map((checkbox) => checkbox.value);
-
-        const libraryNames = checkedLibraries.map((checkbox) =>
-            checkbox
-                .closest(".source-library-option")
-                .querySelector(".library-name")
-                .textContent.trim(),
+        const librariesJson = JSON.stringify(
+            checkedLibraries.map((checkbox) => ({
+                id: checkbox.value,
+                name: checkbox
+                    .closest(".source-library-option")
+                    .querySelector(".library-name")
+                    .textContent.trim(),
+            })),
         );
 
         saveButton.disabled = true;
@@ -407,8 +408,7 @@ function wireSourceCard(card) {
                 "version",
                 card.dataset.testedVersion || "Unknown",
             );
-            formData.append("library_ids", libraryIds.join(","));
-            formData.append("library_names", libraryNames.join(","));
+            formData.append("libraries_json", librariesJson);
 
             const response = await fetch("/api/source/save", {
                 method: "POST",
