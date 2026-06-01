@@ -390,6 +390,8 @@ function wireSourceCard(card) {
                     .closest(".source-library-option")
                     .querySelector(".library-name")
                     .textContent.trim(),
+                type: checkbox.dataset.libraryType || "unknown",
+                image_url: checkbox.dataset.libraryImageUrl || "",
             })),
         );
 
@@ -541,6 +543,8 @@ function renderCompatibleLibraries(container, libraries, selectedLibraryIds = []
                         type="checkbox"
                         class="source-library-checkbox"
                         value="${escapeHtml(library.id)}"
+                        data-library-type="${escapeHtml(library.type || "")}"
+                        data-library-image-url="${escapeHtml(library.image_url || "")}"
                         ${selectedLibraryIds.includes(String(library.id)) ? "checked" : ""}
                     >
 
