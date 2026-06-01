@@ -170,21 +170,21 @@ MediaSync aims to reduce app-hopping and make the entire media workflow easier t
 
 Screenshots will be added after the first clean deployment validation.
 
-### Initial Setup
-
-_Coming soon._
-
 ### Dashboard
 
-_Coming soon._
+Monitor imports, activity, source mappings, and library synchronization in real time.
 
-### Activity Monitoring
+<p align="center">
+  <img src="screenshots/mediasync_dashboard.png" alt="MediaSync Dashboard" width="100%">
+</p>
 
-_Coming soon._
+### Guided Setup
 
-### Settings and Source Mapping
+Connect your media server, discover libraries, configure sources, and map automation workflows in minutes.
 
-_Coming soon._
+<p align="center">
+  <img src="screenshots/mediasync_setup.png" alt="MediaSync Setup Wizard" width="100%">
+</p>
 
 ---
 
@@ -197,15 +197,20 @@ A typical deployment uses Docker Compose or a Portainer stack.
 Example Compose file:
 
 ```yaml
+version: '3.8'
+
 services:
   mediasync:
-    image: mediasync:latest
+    image: ghcr.io/dmesgnoise/mediasync:latest
     container_name: mediasync
+    restart: unless-stopped
     ports:
       - "8097:8097"
     volumes:
-      - ./config:/config
-    restart: unless-stopped
+      - mediasync_config:/config
+
+volumes:
+  mediasync_config:
 ```
 
 For local development or self-building:
