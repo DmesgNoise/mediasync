@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="about-page theme-emby">
+    <div class="about-hero card">
+        <div class="about-logo-row" aria-label="MediaSync theme icons">
+            <div class="about-logo-orb default-orb">
+                <img src="/static/img/default.png" alt="MediaSync default icon">
+            </div>
+
+            <div class="about-logo-orb emby-orb">
+                <img src="/static/img/emby.png" alt="MediaSync Emby themed icon">
+            </div>
+
+            <div class="about-logo-orb plex-orb">
+                <img src="/static/img/plex.png" alt="MediaSync Plex themed icon">
+            </div>
+
+            <div class="about-logo-orb jellyfin-orb">
+                <img src="/static/img/jellyfin.png" alt="MediaSync Jellyfin themed icon">
+            </div>
+        </div>
+
+        <div class="about-title-wrap">
+            <h1>MediaSync</h1>
+            <p class="about-kicker">Library Automation</p>
+        </div>
+
+        <p class="about-description">
+            MediaSync keeps your media stack responsive by connecting acquisition tools
+            directly to your media server. Movies scan immediately, TV imports are handled
+            with queue-aware smart sync, and live activity monitoring keeps library updates
+            visible without app-hopping.
+        </p>
+
+        <div class="about-pill-row">
+            <span class="about-pill">Immediate Movie Scans</span>
+            <span class="about-pill">Queue-Aware TV Sync</span>
+            <span class="about-pill">Smart Library Mapping</span>
+            <span class="about-pill">Live Activity Feed</span>
+        </div>
+    </div>
+
+    <section class="about-card-grid">
+        <article class="about-info-card card">
+            <h2>Built for Flow</h2>
+            <p>
+                MediaSync watches for completed imports and triggers the right mapped
+                library scans automatically. The goal is simple: newly available media
+                should appear quickly without manual refreshes or repeated app checks.
+            </p>
+        </article>
+
+        <article class="about-info-card card">
+            <h2>Connected Stack</h2>
+            <p>
+                Designed around real home media workflows, MediaSync brings sources,
+                libraries, queue-aware scan behavior, and activity history into one
+                clean operational view.
+            </p>
+        </article>
+
+        <article class="about-info-card card">
+            <h2>Current Integrations</h2>
+            <div class="about-integration-list">
+                <span>Emby</span>
+                <span>Radarr</span>
+                <span>Sonarr</span>
+            </div>
+        </article>
+
+        <article class="about-info-card card">
+            <h2>What's Next</h2>
+            <p>
+                MediaSync is evolving toward full media pipeline visibility. Upcoming
+                releases will expand media server support with Plex and Jellyfin, add
+                downloader awareness, and introduce deeper tracking across the path from
+                request to availability.
+            </p>
+
+            <p>
+                The long-term goal is a single pane of glass for the full workflow:
+                Seerr -> Arr -> Downloader -> MediaSync -> Media Server, with future
+                processor integrations like Unmanic for transcoding status, storage
+                optimization, and space savings insight.
+            </p>
+        </article>
+    </section>
+</section>
+
+{% endblock %}

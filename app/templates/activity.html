@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <div>
+        <h1>Activity</h1>
+        <p>Review recent import, scan, queue, and sync events.</p>
+    </div>
+</section>
+
+<section class="card activity-page-card">
+    <div class="card-header">
+        <div>
+            <h2>Recent Events</h2>
+            <p class="card-muted">
+                Showing latest events. Filenames or paths appear based on your settings.
+            </p>
+        </div>
+    </div>
+
+    {% if events %}
+        <div class="activity-page-list" data-activity-page-feed data-activity-file-detail="{{ settings['activity_file_detail'] }}">
+            {% for event in events %}
+                <article class="activity-page-event {{ event['status'] }}">
+                    <div class="activity-event-dot"></div>
+
+                    <div class="activity-page-event-body">
+                        <div class="activity-page-event-top">
+                            <div>
+                                <div class="activity-page-title">{{ event["event_type"] }}</div>
+
+                                <div class="activity-page-route">
+                                    {{ event["source_name"] or "MediaSync" }}
+                                    {% if event["library_name"] %}
+                                        -> {{ event["library_name"] }}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="activity-page-time">{{ event["created_at"] }}</div>
+                        </div>
+
+                        {% if event["media_title"] %}
+                            <div class="activity-page-media">{{ event["media_title"] }}</div>
+                        {% endif %}
+
+                        {% if settings["activity_file_detail"] == "path" and event["file_path"] %}
+                            <div class="activity-page-file">{{ event["file_path"] }}</div>
+                        {% elif event["file_name"] %}
+                            <div class="activity-page-file">{{ event["file_name"] }}</div>
+                        {% endif %}
+
+                        {% if event["details"] %}
+                            <div class="activity-page-details">{{ event["details"] }}</div>
+                        {% endif %}
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="activity-page-list" data-activity-page-feed data-activity-file-detail="{{ settings['activity_file_detail'] }}">
+            <div class="activity-empty-state activity-page-empty">
+                <div class="activity-empty-icon">*</div>
+                <h3>No activity yet</h3>
+                <p>Import and library sync events will appear here once the sync engine is enabled.</p>
+            </div>
+        </div>
+    {% endif %}
+</section>
+
+{% endblock %}

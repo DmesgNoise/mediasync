@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <div>
+        <h1>MediaSync Setup</h1>
+        <p>Add Radarr and Sonarr sources, then map them to compatible libraries.</p>
+    </div>
+</section>
+
+<section class="setup-progress">
+    <div class="progress-step completed">
+        <div class="step-number">✓</div>
+        <div>
+            <div class="step-title">Media Server</div>
+            <div class="step-subtitle">Connected</div>
+        </div>
+    </div>
+
+    <div class="progress-line"></div>
+
+    <div class="progress-step active">
+        <div class="step-number">2</div>
+        <div>
+            <div class="step-title">Sources</div>
+            <div class="step-subtitle">Add arr apps</div>
+        </div>
+    </div>
+
+    <div class="progress-line inactive"></div>
+
+    <div class="progress-step">
+        <div class="step-number">3</div>
+        <div>
+            <div class="step-title">Summary</div>
+            <div class="step-subtitle">Review setup</div>
+        </div>
+    </div>
+</section>
+
+<section class="card">
+    <div class="card-header">
+        <div>
+            <h2>2. Sources</h2>
+            <p class="card-muted">
+                Connect each arr instance and choose which compatible libraries it should sync.
+            </p>
+        </div>
+
+        <button id="add-source-button" class="primary-button" type="button">
+            + Add Source
+        </button>
+    </div>
+
+    {% if sources %}
+        <div class="result-box good">
+            {{ sources|length }} sources are configured. You can add another source, edit existing sources, or continue to summary.
+        </div>
+    {% endif %}
+
+    <script id="saved-sources-data" type="application/json">
+        {{ sources | tojson }}
+    </script>
+
+    <div id="source-card-list" class="source-card-list"></div>
+
+    <div class="form-actions setup-navigation">
+        <a href="/setup" class="primary-button secondary-action">← Back</a>
+
+        <a href="/setup/summary" class="primary-button secondary-action">
+            Next → Summary
+        </a>
+    </div>
+</section>
+
+{% endblock %}

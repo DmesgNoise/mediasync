@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <div>
+        <h1>Settings</h1>
+        <p>Configure MediaSync behavior, activity logging, source mappings, and operational controls.</p>
+    </div>
+</section>
+
+<section class="settings-grid settings-grid-v2">
+
+    <section class="card settings-card">
+        <div class="settings-card-header">
+            <div>
+                <h2>Media Server</h2>
+                <p class="card-muted">Manage the active media server and activity timezone.</p>
+            </div>
+        </div>
+
+        <form data-settings-media-form>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-title">Enabled Server</div>
+                    <div class="settings-description">Current selected media server type.</div>
+                </div>
+
+                <div class="settings-pill good">
+                    {{ media_server["server_type"]|capitalize if media_server else "None" }}
+                </div>
+            </div>
+
+            <div class="settings-row">
+                <div>
+                    <div class="settings-title">Connection Status</div>
+                    <div class="settings-description">MediaSync uses this server for library scans.</div>
+                </div>
+
+                {% if media_server and media_server["connected"] %}
+                    <div class="settings-pill good">Connected</div>
+                {% else %}
+                    <div class="settings-pill warning">Disconnected</div>
+                {% endif %}
+            </div>
+
+            <div class="settings-field-stack">
+                <label>
+                    <span>Server URL</span>
+                    <input
+                        name="server_url"
+                        type="text"
+                        value="{{ media_server['server_url'] if media_server else '' }}"
+                    >
+                </label>
+
+                <label>
+                    <span>API Key</span>
+                    <div class="settings-secret-row">
+                        <input
+                            name="api_key"
+                            type="password"
+                            value="{{ media_server['api_key'] if media_server else '' }}"
+                        >
+                        <button class="mini-action-button" type="button" data-toggle-secret>Show</button>
+                    </div>
+                </label>
+
+                <input
+                    name="timezone"
+                    type="hidden"
+                    data-timezone-value
+                    value="{{ settings['timezone'] if settings else 'America/New_York' }}"
+                >
+
+                <label>
+                    <span>Timezone Region</span>
+                    <select class="settings-select" data-timezone-region>
+                        <option value="north-america">North America</option>
+                        <option value="europe">Europe</option>
+                        <option value="asia">Asia</option>
+                        <option value="australia-pacific">Australia / Pacific</option>
+                        <option value="south-america">South America</option>
+                        <option value="africa">Africa</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>Activity Timezone</span>
+                    <select class="settings-select" data-timezone-select></select>
+                </label>
+            </div>
+
+            <div class="settings-result hidden" data-settings-result></div>
+
+            <div class="settings-actions">
+                <button class="primary-button secondary-action" type="button" data-test-media-server>
+                    Test Connection
+                </button>
+
+                <button class="primary-button" type="submit">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </section>
+
+
+    <section class="card settings-card">
+        <div class="settings-card-header">
+            <div>
+                <h2>MediaSync URL</h2>
+                <p class="card-muted">
+                    Used to automatically register Radarr and Sonarr webhooks.
+                    Use your reverse proxy URL if applicable.
+                </p>
+            </div>
+        </div>
+
+        <form data-app-settings-form>
+            <div class="settings-field-stack">
+                <label>
+                    <span>MediaSync URL</span>
+                    <input
+                        name="mediasync_url"
+                        type="text"
+                        placeholder="https://mediasync.example.com or http://192.168.1.50:8097"
+                        value="{{ settings['mediasync_url'] if settings else '' }}"
+                    >
+                </label>
+            </div>
+
+            <div class="settings-result hidden" data-settings-result></div>
+
+            <div class="settings-actions">
+                <button class="primary-button" type="submit">
+                    Save MediaSync URL
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card settings-card">
+        <div class="settings-card-header">
+            <div>
+                <h2>TV Sync</h2>
+                <p class="card-muted">Tune queue-aware Sonarr sync behavior.</p>
+            </div>
+        </div>
+
+        <form data-tv-sync-form>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-title">Queue Poll Interval</div>
+                    <div class="settings-description">How often MediaSync checks Sonarr while TV activity is active.</div>
+                </div>
+
+                <select class="settings-select compact" name="tv_poll_interval_seconds">
+                    <option value="30" {% if settings["tv_poll_interval_seconds"] == "30" %}selected{% endif %}>30 sec</option>
+                    <option value="60" {% if settings["tv_poll_interval_seconds"] == "60" %}selected{% endif %}>60 sec</option>
+                    <option value="120" {% if settings["tv_poll_interval_seconds"] == "120" %}selected{% endif %}>120 sec</option>
+                </select>
+            </div>
+
+            <div class="settings-row">
+                <div>
+                    <div class="settings-title">Interim Scan Interval</div>
+                    <div class="settings-description">During sustained TV activity, run interim scans on this interval.</div>
+                </div>
+
+                <select class="settings-select compact" name="tv_interim_scan_minutes">
+                    <option value="5" {% if settings["tv_interim_scan_minutes"] == "5" %}selected{% endif %}>5 min</option>
+                    <option value="10" {% if settings["tv_interim_scan_minutes"] == "10" %}selected{% endif %}>10 min</option>
+                    <option value="15" {% if settings["tv_interim_scan_minutes"] == "15" %}selected{% endif %}>15 min</option>
+                    <option value="30" {% if settings["tv_interim_scan_minutes"] == "30" %}selected{% endif %}>30 min</option>
+                </select>
+            </div>
+
+            <div class="settings-row">
+                <div>
+                    <div class="settings-title">Final Scan When Queue Empty</div>
+                    <div class="settings-description">When the Sonarr queue clears, run one final mapped library scan.</div>
+                </div>
+
+                <select class="settings-select compact" name="tv_final_scan_enabled">
+                    <option value="1" {% if settings["tv_final_scan_enabled"] == "1" %}selected{% endif %}>Enabled</option>
+                    <option value="0" {% if settings["tv_final_scan_enabled"] == "0" %}selected{% endif %}>Disabled</option>
+                </select>
+            </div>
+
+            <div class="settings-result hidden" data-settings-result></div>
+
+            <div class="settings-actions">
+                <button class="primary-button" type="submit">Save TV Sync</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card settings-card">
+        <div class="settings-card-header">
+            <div>
+                <h2>Activity</h2>
+                <p class="card-muted">Control history size and file detail logging.</p>
+            </div>
+        </div>
+
+        <form data-activity-settings-form>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-title">Events Displayed</div>
+                    <div class="settings-description">Activity page displays the latest events first.</div>
+                </div>
+
+                <select class="settings-select compact" name="activity_display_limit">
+                    <option value="25" {% if settings["activity_display_limit"] == "25" %}selected{% endif %}>25</option>
+                    <option value="50" {% if settings["activity_display_limit"] == "50" %}selected{% endif %}>50</option>
+                    <option value="100" {% if settings["activity_display_limit"] == "100" %}selected{% endif %}>100</option>
+                    <option value="250" {% if settings["activity_display_limit"] == "250" %}selected{% endif %}>250</option>
+                </select>
+            </div>
+
+            <div class="settings-row">
+                <div>
+                    <div class="settings-title">Event Retention</div>
+                    <div class="settings-description">Maximum stored activity events before cleanup.</div>
+                </div>
+
+                <select class="settings-select compact" name="activity_retention_limit">
+                    <option value="500" {% if settings["activity_retention_limit"] == "500" %}selected{% endif %}>500</option>
+                    <option value="1000" {% if settings["activity_retention_limit"] == "1000" %}selected{% endif %}>1000</option>
+                    <option value="5000" {% if settings["activity_retention_limit"] == "5000" %}selected{% endif %}>5000</option>
+                </select>
+            </div>
+
+            <div class="settings-row settings-row-stack">
+                <div>
+                    <div class="settings-title">File Detail Level</div>
+                    <div class="settings-description">
+                        Choose one. Filenames are cleaner; full paths are better for troubleshooting.
+                    </div>
+                </div>
+
+                <div class="settings-radio-group">
+                    <label class="settings-radio-option">
+                        <input
+                            type="radio"
+                            name="activity_file_detail"
+                            value="filename"
+                            {% if settings["activity_file_detail"] == "filename" %}checked{% endif %}
+                        >
+                        <span>
+                            <strong>Filenames Only</strong>
+                            <small>The.Movie.2025.2160p.mkv</small>
+                        </span>
+                    </label>
+
+                    <label class="settings-radio-option">
+                        <input
+                            type="radio"
+                            name="activity_file_detail"
+                            value="path"
+                            {% if settings["activity_file_detail"] == "path" %}checked{% endif %}
+                        >
+                        <span>
+                            <strong>Full File Paths</strong>
+                            <small>/media/movies/The.Movie.2025.2160p.mkv</small>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="settings-result hidden" data-settings-result></div>
+
+            <div class="settings-actions">
+                <button class="primary-button" type="submit">
+                    Save Activity Settings
+                </button>
+
+                <button class="danger-button" type="button" data-clear-activity>
+                    Clear Activity Log
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card settings-card settings-card-wide">
+        <div class="settings-card-header">
+            <div>
+                <h2>Configured Sources</h2>
+                <p class="card-muted">Test source connections, refresh compatible libraries, and update source mappings.</p>
+            </div>
+
+            <button class="primary-button secondary-action" type="button" data-add-settings-source>
+                Add Source
+            </button>
+        </div>
+
+        <div class="settings-source-list" data-sortable-sources data-settings-source-list>
+            {% if sources %}
+                {% for source in sources %}
+                    <div
+                        class="settings-source-item editable"
+                        draggable="true"
+                        data-source-row
+                        data-source-id="{{ source['id'] }}"
+                        data-source-version="{{ source['version'] or 'Unknown' }}"
+                        data-connection-valid="true"
+                    >
+                        <div class="source-order-controls">
+                            <div class="drag-handle">↕</div>
+                            <button class="mini-action-button source-order-button" type="button" data-source-move-up>Up</button>
+                            <button class="mini-action-button source-order-button" type="button" data-source-move-down>Down</button>
+                        </div>
+
+                        <img src="/static/img/{{ source['source_type'] }}-logo.png" alt="{{ source['source_name'] }}" data-source-logo>
+
+                        <div class="settings-source-edit">
+                            <div class="form-grid">
+                                <label>
+                                    <span>Source Name</span>
+                                    <input name="source_name" type="text" value="{{ source['source_name'] }}">
+                                </label>
+
+                                <label>
+                                    <span>Source Type</span>
+                                    <select class="settings-select" name="source_type" data-source-type>
+                                        <option value="radarr" {% if source["source_type"] == "radarr" %}selected{% endif %}>Radarr</option>
+                                        <option value="sonarr" {% if source["source_type"] == "sonarr" %}selected{% endif %}>Sonarr</option>
+                                    </select>
+                                </label>
+
+                                <label>
+                                    <span>Server URL</span>
+                                    <input name="source_url" type="text" value="{{ source['source_url'] }}">
+                                </label>
+
+                                <label>
+                                    <span>API Key</span>
+                                    <div class="settings-secret-row">
+                                        <input name="api_key" type="password" value="{{ source['api_key'] }}">
+                                        <button class="mini-action-button" type="button" data-toggle-secret>Show</button>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="settings-description">
+                                {{ source["source_type"]|capitalize }}
+                                {% if source["libraries"] %}
+                                    → {{ source["libraries"]|length }} mapped librar{{ "y" if source["libraries"]|length == 1 else "ies" }}
+                                {% else %}
+                                    → No mapped libraries
+                                {% endif %}
+                            </div>
+
+                            <div class="source-library-results" data-settings-compatible-libraries>
+                                {% if source["libraries"] %}
+                                    <div class="library-results-header">
+                                        <div>
+                                            <h3>Mapped Libraries</h3>
+                                            <p>This source will sync these libraries. Test the source to refresh the full compatible list.</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="library-grid">
+                                        {% for library in source["libraries"] %}
+                                            <label class="source-library-option saved">
+                                                <input
+                                                    type="checkbox"
+                                                    class="source-library-checkbox"
+                                                    value="{{ library['library_id'] }}"
+                                                    data-library-name="{{ library['library_name'] }}"
+                                                    data-library-type="{{ library['library_type'] }}"
+                                                    data-library-image-url="{{ library['library_image_url'] or '' }}"
+                                                    checked
+                                                >
+
+                                                {% if library["library_image_url"] %}
+                                                    <img
+                                                        class="library-image"
+                                                        src="{{ library['library_image_url'] }}"
+                                                        alt="{{ library['library_name'] }}"
+                                                        onerror="this.remove(); this.nextElementSibling.style.display='grid';"
+                                                    >
+
+                                                    <div class="library-icon library-icon-fallback" style="display: none;">
+                                                        {% if library["library_type"] == "movies" %}🎬{% elif library["library_type"] == "tvshows" %}📺{% else %}▣{% endif %}
+                                                    </div>
+                                                {% else %}
+                                                    <div class="library-icon">
+                                                        {% if library["library_type"] == "movies" %}🎬{% elif library["library_type"] == "tvshows" %}📺{% else %}▣{% endif %}
+                                                    </div>
+                                                {% endif %}
+
+                                                <div>
+                                                    <div class="library-name">
+                                                        {{ library["library_name"] }}
+                                                    </div>
+
+                                                    <div class="library-type">
+                                                        Mapped Library
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="source-placeholder">
+                                        Compatible libraries will appear after a successful connection test.
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="settings-source-actions">
+                                <button class="mini-action-button" type="button" data-source-test>Test Connection</button>
+                                <button class="mini-action-button good" type="button" data-source-save>Save Source</button>
+                                <button class="mini-action-button danger" type="button" data-source-delete>Delete</button>
+                            </div>
+
+                            <div class="settings-result hidden" data-settings-result></div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        {% if not sources %}
+            <div class="empty-box" data-settings-source-empty>No sources configured yet. Add a Radarr or Sonarr source to begin.</div>
+        {% else %}
+            <div class="empty-box hidden" data-settings-source-empty>No sources configured yet. Add a Radarr or Sonarr source to begin.</div>
+        {% endif %}
+    </section>
+
+    <section class="card settings-card settings-card-wide">
+        <div class="settings-card-header">
+            <div>
+                <h2>Operations</h2>
+                <p class="card-muted">Maintenance actions for testing and setup recovery.</p>
+            </div>
+        </div>
+
+        <div class="settings-operation-row">
+            <button class="primary-button secondary-action" type="button" data-test-all-sources>
+                Test All Sources
+            </button>
+
+            <button class="danger-button" type="button" data-reset-config>
+                Reset Configuration
+            </button>
+        </div>
+
+        <div class="settings-result hidden" data-settings-result></div>
+    </section>
+
+</section>
+
+{% endblock %}

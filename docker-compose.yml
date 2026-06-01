@@ -1,0 +1,9 @@
+services:
+  mediasync:
+    build: .
+    container_name: mediasync
+    ports:
+      - "8097:8097"
+    volumes:
+      - ./config:/config
+    restart: unless-stopped

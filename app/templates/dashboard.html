@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header dashboard-page-header">
+    <div>
+        <h1>Dashboard</h1>
+        <p>
+            Monitor media imports, source mappings, and library synchronization.
+        </p>
+    </div>
+</section>
+
+<section class="dashboard-status-strip">
+
+    <div class="dashboard-status-chip good">
+        <span></span>
+        Media Server Connected
+    </div>
+
+    <div class="dashboard-status-chip">
+        {{ source_count }} Sources
+    </div>
+
+    <div class="dashboard-status-chip">
+        {{ library_count }} Libraries
+    </div>
+
+    <div class="dashboard-status-chip neutral" data-active-sync-count>
+        0 Active Syncs
+    </div>
+
+</section>
+
+<section class="dashboard-layout-v2">
+
+    <section class="card activity-card dashboard-activity-card">
+
+        <div class="card-header">
+            <div>
+                <h2>Recent Activity</h2>
+                <p class="card-muted">
+                    Latest import, scan, and sync events.
+                </p>
+            </div>
+
+            <div class="activity-feed-badge">
+                Live Log
+            </div>
+        </div>
+
+        {% if recent_events %}
+
+            <div class="activity-feed-v2 dashboard-activity-scroll" data-dashboard-activity-feed data-dashboard-file-detail="{{ settings['activity_file_detail'] }}">
+
+                {% for event in recent_events %}
+
+                    <div class="activity-event {{ event['status'] }}">
+                        <div class="activity-event-dot"></div>
+
+                        <div class="activity-event-body">
+                            <div class="activity-event-top">
+                                <div class="activity-event-title">
+                                    {{ event["event_type"] }}
+                                </div>
+
+                                <div class="activity-event-time">
+                                    {{ event["created_at"] }}
+                                </div>
+                            </div>
+
+                            <div class="activity-event-meta">
+                                {{ event["source_name"] or "MediaSync" }}
+                                {% if event["library_name"] %}
+                                    -> {{ event["library_name"] }}
+                                {% endif %}
+                            </div>
+
+                            {% if event["media_title"] %}
+                                <div class="dashboard-activity-extra">
+                                    {{ event["media_title"] }}
+                                </div>
+                            {% endif %}
+
+                            {% if settings["activity_file_detail"] == "path" and event["file_path"] %}
+                                <div class="dashboard-activity-file">
+                                    {{ event["file_path"] }}
+                                </div>
+                            {% elif event["file_name"] %}
+                                <div class="dashboard-activity-file">
+                                    {{ event["file_name"] }}
+                                </div>
+                            {% elif event["file_path"] %}
+                                <div class="dashboard-activity-file">
+                                    {{ event["file_path"] }}
+                                </div>
+                            {% endif %}
+
+                            {% if event["details"] %}
+                                <div class="dashboard-activity-details">
+                                    {{ event["details"] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="activity-feed-v2" data-dashboard-activity-feed data-dashboard-file-detail="{{ settings['activity_file_detail'] }}">
+
+                <div class="activity-event idle">
+                    <div class="activity-event-dot"></div>
+
+                    <div class="activity-event-body">
+                        <div class="activity-event-top">
+                            <div class="activity-event-title">
+                                Waiting for import events
+                            </div>
+
+                            <div class="activity-event-time">
+                                Idle
+                            </div>
+                        </div>
+
+                        <div class="activity-event-meta">
+                            Radarr and Sonarr activity will display here once sync automation is enabled.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        {% endif %}
+
+    </section>
+
+    <aside class="dashboard-side-stack">
+
+        <section class="card dashboard-media-compact">
+
+            <div class="dashboard-card-title">
+                Media Server
+            </div>
+
+            <div class="media-compact-content">
+
+                <a
+                    class="media-compact-logo-link"
+                    href="{{ media_server['server_url'] if media_server else '#' }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open Emby"
+                >
+                    <img
+                        class="media-compact-logo"
+                        src="/static/img/{{ media_server['server_type'] if media_server else 'emby' }}-logo.png"
+                        alt="{{ media_server['server_type']|capitalize if media_server else 'Media Server' }}"
+                    >
+                </a>
+
+                <div class="media-compact-details">
+                    <div class="media-compact-name">
+                        Emby
+                    </div>
+
+                    <div class="media-compact-version">
+                        {{ media_server["version"] if media_server else "Unknown version" }}
+                    </div>
+
+                    <div class="media-compact-status">
+                        <span></span>
+                        Connected
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="card dashboard-sync-sources">
+
+            <div class="dashboard-card-title">
+                Sync Sources
+            </div>
+
+            {% if sources %}
+
+                <div
+                    class="dashboard-source-strip"
+                    style="--dashboard-source-count: {{ sources|length }};"
+                >
+
+                    {% for source in sources %}
+
+                        <a
+                            class="dashboard-source-tile"
+                            href="{{ source['source_url'] }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Open {{ source['source_name'] }}"
+                        >
+
+                            <img
+                                class="dashboard-source-logo"
+                                src="/static/img/{{ source['source_type'] }}-logo.png"
+                                alt="{{ source['source_name'] }}"
+                            >
+
+                            <div class="dashboard-source-name">
+                                {{ source["source_name"] }}
+                            </div>
+
+                        </a>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <div class="empty-box">
+                    No sync sources configured yet.
+                </div>
+
+            {% endif %}
+
+        </section>
+
+        <section class="card dashboard-library-status">
+
+            <div class="dashboard-card-title">
+                Library Status
+            </div>
+
+            {% if sources %}
+
+                <div
+                    class="dashboard-library-strip"
+                    style="--dashboard-source-count: {{ sources|length }};"
+                >
+
+                    {% for source in sources %}
+
+                        {% set library = source["libraries"][0] if source["libraries"] else none %}
+
+                        <div
+                            class="dashboard-library-tile"
+                            data-library-tile
+                            data-source-id="{{ source['id'] }}"
+                        >
+
+                            {% if library %}
+
+                                <div
+                                    class="library-sync-orb idle"
+                                    data-library-orb
+                                    data-progress="0"
+                                >
+
+                                    <img
+                                        class="dashboard-library-logo"
+                                        src="{{ library['library_image_url'] if library['library_image_url'] else '/static/img/default.png' }}"
+                                        alt="{{ library['library_name'] }}"
+                                    >
+
+                                    <svg
+                                        class="library-progress-ring"
+                                        viewBox="0 0 120 120"
+                                        aria-hidden="true"
+                                    >
+                                        <circle
+                                            class="library-progress-value"
+                                            cx="60"
+                                            cy="60"
+                                            r="52"
+                                        ></circle>
+                                    </svg>
+
+                                </div>
+
+                                <div
+                                    class="library-progress-percent hidden"
+                                    data-library-percent
+                                >
+                                    0%
+                                </div>
+
+                                <div class="dashboard-library-name">
+                                    {{ library["library_name"] }}
+                                </div>
+
+                                <div
+                                    class="dashboard-library-state"
+                                    data-library-state
+                                >
+                                    Idle
+                                </div>
+
+                                <button
+                                    class="mini-scan-button"
+                                    type="button"
+                                    data-manual-scan
+                                    data-source-id="{{ source['id'] }}"
+                                    data-library-id="{{ library['library_id'] }}"
+                                    data-library-name="{{ library['library_name'] }}"
+                                >
+                                    Scan
+                                </button>
+
+                            {% else %}
+
+                                <div class="library-sync-orb idle">
+                                    <img
+                                        class="dashboard-library-logo"
+                                        src="/static/img/default.png"
+                                        alt="No library"
+                                    >
+                                </div>
+
+                                <div class="dashboard-library-name">
+                                    No library
+                                </div>
+
+                                <div class="dashboard-library-state">
+                                    Not mapped
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <div class="empty-box">
+                    Library mappings will appear after setup.
+                </div>
+
+            {% endif %}
+
+        </section>
+
+    </aside>
+
+</section>
+
+<script>
+    function setLibrarySyncProgress(tile, percent, stateLabel = "Syncing") {
+        const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
+
+        const orb = tile.querySelector("[data-library-orb]");
+        const ring = tile.querySelector(".library-progress-value");
+        const percentLabel = tile.querySelector("[data-library-percent]");
+        const stateLabelElement = tile.querySelector("[data-library-state]");
+
+        if (!orb || !ring || !percentLabel || !stateLabelElement) {
+            return;
+        }
+
+        const radius = 52;
+        const circumference = 2 * Math.PI * radius;
+        const dashOffset = circumference - ((safePercent / 100) * circumference);
+
+        ring.style.strokeDasharray = circumference;
+        ring.style.strokeDashoffset = dashOffset;
+
+        if (safePercent >= 100) {
+            orb.classList.remove("syncing");
+            orb.classList.add("complete");
+
+            percentLabel.classList.add("hidden");
+            percentLabel.textContent = "";
+
+            stateLabelElement.textContent = "Complete";
+
+            window.setTimeout(() => {
+                orb.classList.remove("complete");
+                stateLabelElement.textContent = "Idle";
+            }, 1600);
+
+            return;
+        }
+
+        if (safePercent <= 0) {
+            orb.classList.remove("syncing", "complete");
+
+            percentLabel.classList.add("hidden");
+            percentLabel.textContent = "";
+
+            stateLabelElement.textContent = "Idle";
+
+            return;
+        }
+
+        orb.classList.add("syncing");
+        orb.classList.remove("complete");
+
+        percentLabel.classList.remove("hidden");
+        percentLabel.textContent = `${Math.round(safePercent)}%`;
+
+        stateLabelElement.textContent = stateLabel;
+    }
+
+    function demoLibrarySyncAnimation() {
+        const params = new URLSearchParams(window.location.search);
+
+        if (!params.has("demoSync")) {
+            return;
+        }
+
+        const firstTile = document.querySelector("[data-library-tile]");
+
+        if (!firstTile) {
+            return;
+        }
+
+        let progress = 0;
+
+        setLibrarySyncProgress(firstTile, progress, "Syncing");
+
+        const timer = window.setInterval(() => {
+            progress += 4;
+
+            setLibrarySyncProgress(firstTile, progress, "Syncing");
+
+            if (progress >= 100) {
+                window.clearInterval(timer);
+            }
+        }, 260);
+    }
+
+    document.addEventListener("DOMContentLoaded", demoLibrarySyncAnimation);
+</script>
+
+{% endblock %}

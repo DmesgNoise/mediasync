@@ -1,0 +1,20 @@
+# Runtime database / config
+config/
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+
+# Editor / OS files
+.DS_Store
+*.swp
+*.bak
+
+# Logs
+*.log

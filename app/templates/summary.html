@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <div>
+        <h1>MediaSync Setup</h1>
+        <p>
+            Review your configuration before finishing setup.
+        </p>
+    </div>
+</section>
+
+<section class="setup-progress summary-progress">
+
+    <div class="progress-step completed">
+        <div class="step-number">✓</div>
+        <div>
+            <div class="step-title">Media Server</div>
+            <div class="step-subtitle">Connect Emby</div>
+        </div>
+    </div>
+
+    <div class="progress-line"></div>
+
+    <div class="progress-step completed">
+        <div class="step-number">✓</div>
+        <div>
+            <div class="step-title">Sources</div>
+            <div class="step-subtitle">Add arr apps</div>
+        </div>
+    </div>
+
+    <div class="progress-line"></div>
+
+    <div class="progress-step active">
+        <div class="step-number">3</div>
+        <div>
+            <div class="step-title">Summary</div>
+            <div class="step-subtitle">Review setup</div>
+        </div>
+    </div>
+
+</section>
+
+<section class="summary-shell">
+
+    <div class="summary-title-block">
+        <h2>3. Summary</h2>
+        <p>Review and confirm your MediaSync configuration.</p>
+    </div>
+
+    <div class="summary-label">Media Server</div>
+
+    <section class="summary-server-card">
+        <div class="summary-server-identity">
+            <img
+                class="summary-emby-logo"
+                src="/static/img/emby-logo.png"
+                alt="Emby"
+            >
+
+            <div class="summary-server-text">
+                <h3>Emby</h3>
+                <p class="summary-server-name">
+                    {{ media_server["server_name"] if media_server else "Not configured" }}
+                </p>
+                <p class="summary-meta">
+                    Version {{ media_server["version"] if media_server else "Unknown" }}
+                    <span>•</span>
+                    {{ media_server["timezone"] if media_server else "Timezone not set" }}
+                </p>
+            </div>
+        </div>
+
+        <div class="summary-connected-pill">
+            <span></span>
+            Connected
+        </div>
+    </section>
+
+    <div class="summary-label">Configured Sources</div>
+
+    <section class="summary-source-grid">
+
+        {% for source in sources %}
+            <article class="summary-source-card">
+
+                <div class="summary-source-header">
+                    <img
+                        class="summary-source-logo"
+                        src="/static/img/{{ source['source_type'] }}-logo.png"
+                        alt="{{ source['source_name'] }}"
+                    >
+
+                    <div class="summary-source-details">
+                        <h3>{{ source["source_name"] }}</h3>
+                        <p class="summary-source-url">{{ source["source_url"] }}</p>
+                        <p class="summary-source-connected">
+                            <span></span>
+                            Connected
+                            <em>|</em>
+                            {{ source["version"] }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="summary-source-divider"></div>
+
+                <div class="summary-library-heading">Syncing Libraries</div>
+
+                <div class="summary-library-list">
+                    {% for library in source["libraries"] %}
+                        <div class="summary-library-chip">
+                            {% if library["library_image_url"] %}
+                                <img
+                                    src="{{ library['library_image_url'] }}"
+                                    alt="{{ library['library_name'] }}"
+                                >
+                            {% else %}
+                                <span class="summary-library-fallback">✓</span>
+                            {% endif %}
+                            <span>{{ library["library_name"] }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+
+            </article>
+        {% endfor %}
+
+    </section>
+
+    <section class="summary-status-row">
+
+        <div class="summary-status-item">
+            <div class="summary-status-check">✓</div>
+            <div>
+                <h4>Media server connected</h4>
+                <p>Emby is connected and ready</p>
+            </div>
+        </div>
+
+        <div class="summary-status-item">
+            <div class="summary-status-check">✓</div>
+            <div>
+                <h4>{{ source_count }} sources configured</h4>
+                <p>
+                    {% for source in sources %}
+                        {{ source["source_name"] }}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </p>
+            </div>
+        </div>
+
+        <div class="summary-status-item">
+            <div class="summary-status-check">✓</div>
+            <div>
+                <h4>{{ library_count }} library mappings</h4>
+                <p>Ready for synchronization</p>
+            </div>
+        </div>
+
+    </section>
+
+    <div class="summary-actions">
+        <a href="/setup/sources" class="primary-button secondary-action">
+            ← Back
+        </a>
+
+        <a href="/" class="primary-button summary-finish-button">
+            ✓ Finish Setup
+        </a>
+    </div>
+
+</section>
+
+{% endblock %}
