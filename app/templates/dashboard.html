@@ -263,7 +263,7 @@
 
                                     <img
                                         class="dashboard-library-logo"
-                                        src="{{ library['library_image_url'] if library['library_image_url'] else '/static/img/default.png' }}"
+                                        src="{{ library['library_image_url'] if library['library_image_url'] else ('/static/img/sonarr-logo.png' if library['library_type'] == 'tvshows' else '/static/img/radarr-logo.png') }}"
                                         alt="{{ library['library_name'] }}"
                                     >
 
