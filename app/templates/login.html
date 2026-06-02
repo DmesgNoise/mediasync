@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ app_name }} - Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/css/app.css?v=auth11">
+</head>
+<body class="theme-{{ media_server['server_type'] if media_server else 'default' }} auth-page">
+    <main class="auth-shell">
+        <section class="auth-card">
+            <div class="auth-brand">
+                {% set logo_theme = media_server['server_type'] if media_server else 'default' %}
+                <img class="auth-logo" src="/static/img/{{ logo_theme }}.png" alt="MediaSync">
+                <div>
+                    <div class="brand-title">MediaSync</div>
+                    <div class="brand-subtitle">Secure Login</div>
+                </div>
+            </div>
+
+            <h1>Welcome Back</h1>
+            <p class="card-muted">Sign in to manage MediaSync.</p>
+
+            {% if error %}
+                <div class="form-message error">{{ error }}</div>
+            {% endif %}
+
+            <form class="setup-form" method="post" action="/login">
+                <label>
+                    <span>Username</span>
+                    <input name="username" type="text" autocomplete="username" value="{{ username or '' }}" required autofocus>
+                </label>
+
+                <label>
+                    <span>Password</span>
+                    <input name="password" type="password" autocomplete="current-password" required>
+                </label>
+
+                <button class="primary-button" type="submit">Login</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

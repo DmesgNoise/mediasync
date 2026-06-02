@@ -1,9 +1,13 @@
 import asyncio
 import json
+import os
+import secrets
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Form, Request
 from fastapi.responses import RedirectResponse, StreamingResponse
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -11,8 +15,12 @@ from app.api.server import router as server_router
 from app.api.source import router as source_router
 from app.api.settings import router as settings_router
 from app.database import (
+    admin_exists,
+    authenticate_admin,
+    create_admin_user,
     get_activity_events,
     get_app_settings,
+    get_admin_user,
     get_media_server,
     get_sources,
     init_db,
@@ -33,6 +41,26 @@ app = FastAPI(
     title="MediaSync",
     lifespan=lifespan,
 )
+
+
+def _get_session_secret():
+    env_secret = os.environ.get("MEDIASYNC_SESSION_SECRET", "").strip()
+
+    if env_secret:
+        return env_secret
+
+    secret_path = Path("/config/session_secret")
+    secret_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if secret_path.exists():
+        existing_secret = secret_path.read_text().strip()
+        if existing_secret:
+            return existing_secret
+
+    new_secret = secrets.token_urlsafe(48)
+    secret_path.write_text(new_secret)
+    return new_secret
+
 
 templates = Jinja2Templates(
     directory="app/templates",
@@ -90,16 +118,60 @@ def _is_setup_complete():
     return True
 
 
+def _is_logged_in(request: Request):
+    user_id = request.session.get("admin_user_id")
+    return get_admin_user(user_id) is not None
+
+
+def _set_login_session(request: Request, user):
+    request.session.clear()
+    request.session["admin_user_id"] = user["id"]
+    request.session["admin_username"] = user["username"]
+
+
+def _get_post_login_redirect():
+    if _is_setup_complete():
+        return "/"
+
+    return "/setup"
+
+
 @app.middleware("http")
-async def setup_gate(request: Request, call_next):
+async def auth_and_setup_gate(request: Request, call_next):
     path = request.url.path
+    auth_paths = {"/auth/setup", "/login", "/logout"}
     setup_paths = {"/setup", "/setup/sources", "/setup/summary"}
 
     if (
-        path.startswith("/api")
-        or path.startswith("/static")
+        path.startswith("/static")
         or path == "/health"
     ):
+        return await call_next(request)
+
+    has_admin = admin_exists()
+    logged_in = _is_logged_in(request)
+
+    if path.startswith("/api"):
+        if not has_admin:
+            return RedirectResponse(url="/auth/setup", status_code=303)
+
+        if not logged_in:
+            return RedirectResponse(url="/login", status_code=303)
+
+        return await call_next(request)
+
+    if not has_admin:
+        if path != "/auth/setup":
+            return RedirectResponse(url="/auth/setup", status_code=303)
+        return await call_next(request)
+
+    if logged_in and path in {"/auth/setup", "/login"}:
+        return RedirectResponse(url=_get_post_login_redirect(), status_code=303)
+
+    if not logged_in and path not in auth_paths:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not logged_in:
         return await call_next(request)
 
     setup_complete = _is_setup_complete()
@@ -113,7 +185,116 @@ async def setup_gate(request: Request, call_next):
     return await call_next(request)
 
 
+@app.get("/auth/setup")
+async def auth_setup(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "auth_setup.html",
+        {
+            "active_page": "auth_setup",
+            "app_name": "MediaSync",
+            "media_server": get_media_server(),
+            "error": None,
+        },
+    )
+
+
+@app.post("/auth/setup")
+async def create_auth_setup(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    confirm_password: str = Form(...),
+):
+    if password != confirm_password:
+        return templates.TemplateResponse(
+            request,
+            "auth_setup.html",
+            {
+                "active_page": "auth_setup",
+                "app_name": "MediaSync",
+                "media_server": get_media_server(),
+                "error": "Passwords do not match.",
+                "username": username,
+            },
+            status_code=400,
+        )
+
+    result = create_admin_user(username=username, password=password)
+
+    if not result.get("success"):
+        return templates.TemplateResponse(
+            request,
+            "auth_setup.html",
+            {
+                "active_page": "auth_setup",
+                "app_name": "MediaSync",
+                "media_server": get_media_server(),
+                "error": result.get("message", "Unable to create admin account."),
+                "username": username,
+            },
+            status_code=400,
+        )
+
+    _set_login_session(
+        request,
+        {
+            "id": result["user_id"],
+            "username": result["username"],
+        },
+    )
+
+    return RedirectResponse(url=_get_post_login_redirect(), status_code=303)
+
+
+@app.get("/login")
+async def login(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "login.html",
+        {
+            "active_page": "login",
+            "app_name": "MediaSync",
+            "media_server": get_media_server(),
+            "error": None,
+        },
+    )
+
+
+@app.post("/login")
+async def login_submit(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    user = authenticate_admin(username=username, password=password)
+
+    if not user:
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {
+                "active_page": "login",
+                "app_name": "MediaSync",
+                "media_server": get_media_server(),
+                "error": "Invalid username or password.",
+                "username": username,
+            },
+            status_code=401,
+        )
+
+    _set_login_session(request, user)
+    return RedirectResponse(url=_get_post_login_redirect(), status_code=303)
+
+
+@app.get("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/login", status_code=303)
+
+
 @app.get("/")
+@app.get("/dashboard")
 async def dashboard(request: Request):
     media_server = get_media_server()
     sources = get_sources()
@@ -291,3 +472,10 @@ async def health():
     return {
         "status": "MediaSync online",
     }
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=_get_session_secret(),
+    same_site="lax",
+    https_only=False,
+)

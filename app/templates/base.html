@@ -31,13 +31,19 @@
         </nav>
 
         <div class="sidebar-status">
+            <a class="sidebar-logout" href="/logout">Logout</a>
             <div class="status-label">Status</div>
             <div class="status-pill good">Running</div>
-            <div class="status-note">MediaSync v1.0</div>
+            <div class="status-note">MediaSync v1.1</div>
         </div>
     </aside>
 
     <main class="main-content">
+        {% if active_page == "setup" %}
+            <div class="top-auth-action">
+                <a href="/logout">Logout</a>
+            </div>
+        {% endif %}
         {% block content %}{% endblock %}
     </main>
 </div>

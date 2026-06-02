@@ -1,4 +1,7 @@
 import asyncio
+import hashlib
+import hmac
+import secrets
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -197,6 +200,15 @@ def init_db():
         )
     """)
     c.execute("""
+        CREATE TABLE IF NOT EXISTS auth_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            last_login_at TEXT
+        )
+    """)
+    c.execute("""
         CREATE TABLE IF NOT EXISTS app_settings (
             key TEXT PRIMARY KEY,
             value TEXT
@@ -220,6 +232,144 @@ def _add_column_if_missing(cursor, table_name, column_name, column_definition):
     columns = [row["name"] for row in cursor.fetchall()]
     if column_name not in columns:
         cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}")
+
+
+
+def _hash_password(password, salt=None):
+    if salt is None:
+        salt = secrets.token_hex(16)
+
+    password_bytes = str(password).encode("utf-8")
+    salt_bytes = salt.encode("utf-8")
+    derived_key = hashlib.pbkdf2_hmac(
+        "sha256",
+        password_bytes,
+        salt_bytes,
+        260000,
+    )
+    return f"pbkdf2_sha256$260000${salt}${derived_key.hex()}"
+
+
+def _verify_password(password, stored_hash):
+    try:
+        algorithm, iterations, salt, expected_hash = str(stored_hash).split("$", 3)
+    except ValueError:
+        return False
+
+    if algorithm != "pbkdf2_sha256":
+        return False
+
+    try:
+        iteration_count = int(iterations)
+    except ValueError:
+        return False
+
+    password_bytes = str(password).encode("utf-8")
+    salt_bytes = salt.encode("utf-8")
+    derived_key = hashlib.pbkdf2_hmac(
+        "sha256",
+        password_bytes,
+        salt_bytes,
+        iteration_count,
+    ).hex()
+
+    return hmac.compare_digest(derived_key, expected_hash)
+
+
+def admin_exists():
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM auth_users")
+    count = c.fetchone()[0]
+    conn.close()
+    return count > 0
+
+
+def create_admin_user(username, password):
+    normalized_username = str(username or "").strip()
+    normalized_password = str(password or "")
+
+    if not normalized_username:
+        return {"success": False, "message": "Username is required."}
+
+    if len(normalized_password) < 8:
+        return {"success": False, "message": "Password must be at least 8 characters."}
+
+    if admin_exists():
+        return {"success": False, "message": "Admin account already exists."}
+
+    conn = get_connection()
+    c = conn.cursor()
+
+    try:
+        c.execute(
+            "INSERT INTO auth_users (username, password_hash) VALUES (?, ?)",
+            (normalized_username, _hash_password(normalized_password)),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        return {"success": False, "message": "Admin account already exists."}
+
+    user_id = c.lastrowid
+    conn.close()
+
+    return {
+        "success": True,
+        "message": "Admin account created.",
+        "user_id": user_id,
+        "username": normalized_username,
+    }
+
+
+def authenticate_admin(username, password):
+    normalized_username = str(username or "").strip()
+
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "SELECT * FROM auth_users WHERE username = ? ORDER BY id ASC LIMIT 1",
+        (normalized_username,),
+    )
+    row = c.fetchone()
+
+    if not row:
+        conn.close()
+        return None
+
+    user = dict(row)
+
+    if not _verify_password(password, user.get("password_hash")):
+        conn.close()
+        return None
+
+    c.execute(
+        "UPDATE auth_users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?",
+        (user["id"],),
+    )
+    conn.commit()
+    conn.close()
+
+    return {
+        "id": user["id"],
+        "username": user["username"],
+    }
+
+
+def get_admin_user(user_id):
+    if not user_id:
+        return None
+
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "SELECT id, username, created_at, last_login_at FROM auth_users WHERE id = ?",
+        (user_id,),
+    )
+    row = c.fetchone()
+    conn.close()
+
+    return dict(row) if row else None
 
 
 def get_app_settings():

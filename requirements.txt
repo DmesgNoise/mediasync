@@ -6,3 +6,4 @@ aiosqlite~=0.21
 python-multipart~=0.0
 requests~=2.32
 pydantic~=2.11
+itsdangerous~=2.2

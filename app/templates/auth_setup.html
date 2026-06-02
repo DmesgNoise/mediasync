@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ app_name }} - Admin Setup</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/css/app.css?v=auth11">
+</head>
+<body class="theme-default auth-page">
+    <main class="auth-shell">
+        <section class="auth-card">
+            <div class="auth-brand">
+                <img class="auth-logo" src="/static/img/default.png" alt="MediaSync">
+                <div>
+                    <div class="brand-title">MediaSync</div>
+                    <div class="brand-subtitle">Admin Setup</div>
+                </div>
+            </div>
+
+            <h1>Create Admin Account</h1>
+            <p class="card-muted">
+                Create the first administrator account before MediaSync is exposed behind your reverse proxy.
+            </p>
+
+            {% if error %}
+                <div class="form-message error">{{ error }}</div>
+            {% endif %}
+
+            <form class="setup-form" method="post" action="/auth/setup">
+                <label>
+                    <span>Username</span>
+                    <input name="username" type="text" autocomplete="username" value="{{ username or '' }}" required autofocus>
+                </label>
+
+                <label>
+                    <span>Password</span>
+                    <input name="password" type="password" autocomplete="new-password" minlength="8" required>
+                </label>
+
+                <label>
+                    <span>Confirm Password</span>
+                    <input name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
+                </label>
+
+                <button class="primary-button" type="submit">Create Admin</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>
