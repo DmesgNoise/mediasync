@@ -153,7 +153,7 @@
                     href="{{ media_server['server_url'] if media_server else '#' }}"
                     target="_blank"
                     rel="noopener noreferrer"
-                    title="Open Emby"
+                    title="Open {{ media_server['server_type']|capitalize if media_server else 'Media Server' }}"
                 >
                     <img
                         class="media-compact-logo"
@@ -164,7 +164,7 @@
 
                 <div class="media-compact-details">
                     <div class="media-compact-name">
-                        Emby
+                        {{ media_server["server_type"]|capitalize if media_server else "Media Server" }}
                     </div>
 
                     <div class="media-compact-version">

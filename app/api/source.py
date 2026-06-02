@@ -12,7 +12,7 @@ from app.database import (
     get_sources,
     save_source,
 )
-from app.providers.media_servers.emby import EmbyProvider
+from app.providers.media_servers.base import build_media_server_provider
 from app.providers.sources.radarr import RadarrProvider
 from app.providers.sources.sonarr import SonarrProvider
 
@@ -245,12 +245,16 @@ def get_compatible_libraries(source_type: str) -> list[dict]:
     if not media_server or not media_server["connected"]:
         return []
 
-    emby = EmbyProvider(
+    provider = build_media_server_provider(
+        server_type=media_server["server_type"],
         server_url=media_server["server_url"],
         api_key=media_server["api_key"],
     )
 
-    libraries = emby.get_libraries()
+    if not provider:
+        return []
+
+    libraries = provider.get_libraries()
 
     if source_type == "radarr":
         return [

@@ -14,7 +14,7 @@ from app.database import (
     update_media_server_config,
     update_source_config,
 )
-from app.providers.media_servers.emby import EmbyProvider
+from app.providers.media_servers.base import build_media_server_provider
 from app.providers.sources.radarr import RadarrProvider
 from app.providers.sources.sonarr import SonarrProvider
 
@@ -46,7 +46,18 @@ async def test_media_server_settings(
     server_url: str = Form(...),
     api_key: str = Form(...),
 ):
-    provider = EmbyProvider(server_url=server_url, api_key=api_key)
+    media_server = get_media_server()
+    server_type = media_server["server_type"] if media_server else "emby"
+
+    provider = build_media_server_provider(
+        server_type=server_type,
+        server_url=server_url,
+        api_key=api_key,
+    )
+
+    if not provider:
+        return {"success": False, "message": "Unsupported media server type."}
+
     result = provider.test_connection()
 
     add_activity_event(
@@ -310,10 +321,17 @@ async def manual_library_scan(
             "message": "No media server configured.",
         }
 
-    provider = EmbyProvider(
+    provider = build_media_server_provider(
+        server_type=media_server["server_type"],
         server_url=media_server["server_url"],
         api_key=media_server["api_key"],
     )
+
+    if not provider:
+        return {
+            "success": False,
+            "message": "Unsupported media server type.",
+        }
 
     scan_requested_at = provider.utc_now_iso()
 
@@ -360,10 +378,19 @@ async def manual_library_scan_status(
             "progress": 0,
         }
 
-    provider = EmbyProvider(
+    provider = build_media_server_provider(
+        server_type=media_server["server_type"],
         server_url=media_server["server_url"],
         api_key=media_server["api_key"],
     )
+
+    if not provider:
+        return {
+            "success": False,
+            "message": "Unsupported media server type.",
+            "running": False,
+            "progress": 0,
+        }
 
     return provider.get_library_scan_status(
         library_id=library_id,

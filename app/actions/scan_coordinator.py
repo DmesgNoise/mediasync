@@ -2,7 +2,7 @@ import threading
 import time
 
 from app.database import add_activity_event, get_app_settings
-from app.providers.media_servers.emby import EmbyProvider
+from app.providers.media_servers.base import build_media_server_provider
 from app.providers.sources.sonarr import SonarrProvider
 
 TV_QUEUE_MONITORS = {}
@@ -38,6 +38,17 @@ def request_scan(
             import_event,
         )
         return
+
+
+def _build_media_server_provider(media_server):
+    if not media_server:
+        return None
+
+    return build_media_server_provider(
+        server_type=media_server.get("server_type"),
+        server_url=media_server.get("server_url"),
+        api_key=media_server.get("api_key"),
+    )
 
 
 def _get_positive_int(value, default):
@@ -86,10 +97,23 @@ def _run_movie_scan(
     library,
     import_event,
 ):
-    emby = EmbyProvider(
-        server_url=media_server["server_url"],
-        api_key=media_server["api_key"],
-    )
+    provider = _build_media_server_provider(media_server)
+
+    if not provider:
+        add_activity_event(
+            event_type="Movie library scan failed",
+            status="error",
+            source_id=source["id"],
+            source_name=source["source_name"],
+            source_type=source["source_type"],
+            library_id=library["library_id"],
+            library_name=library["library_name"],
+            media_title=import_event.get("media_title"),
+            file_name=import_event.get("file_name"),
+            file_path=import_event.get("file_path"),
+            details="Unsupported media server type.",
+        )
+        return
 
     add_activity_event(
         event_type="Movie library scan started",
@@ -105,7 +129,7 @@ def _run_movie_scan(
         details="Immediate movie scan executing.",
     )
 
-    result = emby.scan_library(
+    result = provider.scan_library(
         library_id=library["library_id"],
         library_name=library["library_name"],
     )
@@ -380,12 +404,25 @@ def _execute_tv_scan(
     reason,
     failure_event_type,
 ):
-    emby = EmbyProvider(
-        server_url=media_server["server_url"],
-        api_key=media_server["api_key"],
-    )
+    provider = _build_media_server_provider(media_server)
 
-    result = emby.scan_library(
+    if not provider:
+        add_activity_event(
+            event_type=failure_event_type,
+            status="error",
+            source_id=source["id"],
+            source_name=source["source_name"],
+            source_type=source["source_type"],
+            library_id=library["library_id"],
+            library_name=library["library_name"],
+            media_title=import_event.get("media_title"),
+            file_name=import_event.get("file_name"),
+            file_path=import_event.get("file_path"),
+            details="Unsupported media server type.",
+        )
+        return
+
+    result = provider.scan_library(
         library_id=library["library_id"],
         library_name=library["library_name"],
     )

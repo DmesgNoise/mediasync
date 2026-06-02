@@ -152,6 +152,13 @@ async def auth_and_setup_gate(request: Request, call_next):
     logged_in = _is_logged_in(request)
 
     if path.startswith("/api"):
+        webhook_paths = (
+            path.startswith("/api/source/webhook/")
+        )
+
+        if webhook_paths:
+            return await call_next(request)
+
         if not has_admin:
             return RedirectResponse(url="/auth/setup", status_code=303)
 
