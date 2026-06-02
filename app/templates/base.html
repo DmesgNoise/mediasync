@@ -5,6 +5,17 @@
     <title>{{ app_name }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <meta name="theme-color" content="#111827">
+    <meta name="application-name" content="MediaSync">
+    <meta name="apple-mobile-web-app-title" content="MediaSync">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/static/img/default.png">
+    <link rel="icon" type="image/png" href="/static/img/default.png">
+
     <link rel="stylesheet" href="/static/css/app.css?v=ui-final11">
 </head>
 
@@ -64,6 +75,15 @@
 
 <script src="/static/js/app.js?v=ui-final3"></script>
 <script src="/static/js/ui-final.js?v=ui-final11"></script>
+<script>
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+            navigator.serviceWorker.register("/sw.js").catch(function () {
+                // Service worker registration is optional. MediaSync remains usable without it.
+            });
+        });
+    }
+</script>
 
 </body>
 </html>

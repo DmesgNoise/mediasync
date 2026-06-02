@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -467,11 +467,32 @@ async def activity_stream():
     )
 
 
+
+@app.get("/manifest.webmanifest", include_in_schema=False)
+async def manifest():
+    return FileResponse(
+        "app/static/manifest.webmanifest",
+        media_type="application/manifest+json",
+    )
+
+
+@app.get("/sw.js", include_in_schema=False)
+async def service_worker():
+    return FileResponse(
+        "app/static/sw.js",
+        media_type="application/javascript",
+        headers={
+            "Cache-Control": "no-cache",
+        },
+    )
+
+
 @app.get("/health")
 async def health():
     return {
         "status": "MediaSync online",
     }
+
 
 app.add_middleware(
     SessionMiddleware,
