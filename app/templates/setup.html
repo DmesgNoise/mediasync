@@ -14,7 +14,7 @@
         <div class="step-number">1</div>
         <div>
             <div class="step-title">Media Server</div>
-            <div class="step-subtitle">Connect Emby or Jellyfin</div>
+            <div class="step-subtitle">Connect Emby, Jellyfin, or Plex</div>
         </div>
     </div>
 
@@ -44,7 +44,7 @@
         <div>
             <h2>1. Media Server</h2>
             <p class="card-muted">
-                Connect Emby or Jellyfin so MediaSync can discover libraries and trigger mapped scans.
+                Connect Emby, Jellyfin, or Plex so MediaSync can discover libraries and trigger mapped scans.
             </p>
         </div>
 
@@ -66,6 +66,9 @@
                     <option value="jellyfin" {% if media_server and media_server["server_type"] == "jellyfin" %}selected{% endif %}>
                         Jellyfin
                     </option>
+                    <option value="plex" {% if media_server and media_server["server_type"] == "plex" %}selected{% endif %}>
+                        Plex
+                    </option>
                 </select>
             </label>
 
@@ -74,17 +77,17 @@
                 <input
                     name="server_url"
                     type="text"
-                    placeholder="https://jellyfin.example.com or https://emby.example.com"
+                    placeholder="https://plex.example.com, https://jellyfin.example.com, or https://emby.example.com"
                     value="{{ media_server['server_url'] if media_server else '' }}"
                 >
             </label>
 
             <label>
-                <span>API Key</span>
+                <span>API Key / Token</span>
                 <input
                     name="api_key"
                     type="password"
-                    placeholder="Enter media server API key"
+                    placeholder="Enter media server API key or Plex token"
                     value="{{ media_server['api_key'] if media_server else '' }}"
                 >
             </label>

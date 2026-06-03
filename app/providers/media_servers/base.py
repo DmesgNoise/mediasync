@@ -1,10 +1,12 @@
 from app.providers.media_servers.emby import EmbyProvider
 from app.providers.media_servers.jellyfin import JellyfinProvider
+from app.providers.media_servers.plex import PlexProvider
 
 
 SUPPORTED_MEDIA_SERVER_TYPES = {
     "emby",
     "jellyfin",
+    "plex",
 }
 
 
@@ -20,5 +22,8 @@ def build_media_server_provider(server_type: str | None, server_url: str, api_ke
 
     if normalized_type == "jellyfin":
         return JellyfinProvider(server_url=server_url, api_key=api_key)
+
+    if normalized_type == "plex":
+        return PlexProvider(server_url=server_url, api_key=api_key)
 
     return None
