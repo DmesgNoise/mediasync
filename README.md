@@ -8,11 +8,11 @@
 <h1 align="center">MediaSync</h1>
 
 <p align="center">
-  <strong>Library Automation</strong>
+  <strong>Media Server Automation and Visibility</strong>
 </p>
 
 <p align="center">
-  MediaSync keeps your media stack responsive by connecting acquisition tools directly to your media server.
+  MediaSync keeps your media stack responsive by connecting automation tools directly to Emby, Jellyfin, and Plex.
   Movies scan immediately, TV imports are handled with queue-aware smart sync, and live activity monitoring keeps
   library updates visible without app-hopping.
 </p>
@@ -21,7 +21,8 @@
   <strong>Immediate Movie Scans</strong> •
   <strong>Queue-Aware TV Sync</strong> •
   <strong>Smart Library Mapping</strong> •
-  <strong>Live Activity Monitoring</strong>
+  <strong>Live Activity Monitoring</strong> •
+  <strong>Emby / Jellyfin / Plex</strong>
 </p>
 
 ---
@@ -46,22 +47,24 @@ When Radarr reports a completed movie import, MediaSync scans the mapped movie l
 
 ### Queue-Aware TV Sync
 
-TV imports use smart queue-aware behavior.
+TV imports are handled differently than movies.
 
-MediaSync avoids hammering the media server during large episode batches while still making new content available quickly.
+A movie library typically receives one import at a time. TV libraries often receive entire seasons, multiple episodes, or large batches over an extended period.
 
-TV sync behavior:
+Instead of triggering a full library scan for every imported episode, MediaSync monitors the Sonarr queue and intelligently coordinates library refreshes.
+
+TV sync workflow:
 
 ```text
 First TV import
 → immediate mapped library scan
-→ Sonarr queue monitoring begins
-→ interim scans run according to user settings while the queue remains active
+→ queue monitoring begins
+→ optional interim scans while imports continue
 → queue empty
-→ one final authoritative mapped library scan
+→ final authoritative library scan
 ```
 
-This is ideal for season packs, multi-episode imports, and sustained download activity.
+This approach keeps newly imported content available quickly while avoiding excessive media-server scans during large download or import sessions.
 
 ### Smart Source → Library Mapping
 
@@ -72,9 +75,24 @@ Examples:
 ```text
 Radarr → Movies
 Sonarr → TV Shows
+Radarr 4K → Movies 4K
 ```
 
 Multiple source instances are supported, so users can map different Radarr or Sonarr instances to different libraries without special-case configuration.
+
+### Multi-Platform Media Server Support
+
+MediaSync currently supports Emby, Jellyfin, and Plex.
+
+Supported media server behavior includes:
+
+- library discovery
+- smart source mapping
+- immediate movie scans
+- queue-aware TV synchronization
+- manual library scans
+- activity monitoring
+- dynamic UI theming by selected media server
 
 ### Live Activity Monitoring
 
@@ -93,14 +111,20 @@ Track events such as:
 
 Activity timestamps follow the configured timezone, and file display can be switched between filenames and full paths.
 
+### Authentication and PWA Support
+
+MediaSync includes first-run admin account creation, login/logout support, and session-based authentication.
+
+MediaSync also supports Progressive Web App behavior, including iPhone Home Screen installation when deployed behind HTTPS.
+
 ### First-Run Setup and Ongoing Settings
 
-MediaSync uses a mandatory first-run setup flow.
+MediaSync includes a guided first-run setup process.
 
-Once setup is complete, the Settings page becomes the canonical place to manage:
+After setup, all configuration is managed from the Settings page:
 
 - media server connection
-- MediaSync webhook URL
+- MediaSync URL
 - source connections
 - source testing
 - library mapping
@@ -108,17 +132,17 @@ Once setup is complete, the Settings page becomes the canonical place to manage:
 - activity display behavior
 - manual reset/recovery
 
-Configured systems cannot return to setup unless configuration is reset.
-
 ---
 
 ## Supported Integrations
 
 ### Current
 
-Media server:
+Media servers:
 
 - Emby
+- Jellyfin
+- Plex
 
 Sources:
 
@@ -127,60 +151,67 @@ Sources:
 
 ### Planned
 
-Media servers:
-
-- Plex
-- Jellyfin
-
 Pipeline and processing:
 
 - downloader tracking and queue visibility
 - Unmanic integration
-- transcoding status
+- transcoding visibility
 - storage optimization insight
 - real-time space savings feedback
+- service health monitoring
+- request-to-availability tracking
+- end-to-end media pipeline visibility
 
 ---
 
-## Long-Term Vision
+## MediaSync 2.x Vision
 
-MediaSync is evolving toward full media pipeline visibility.
+MediaSync is evolving beyond library synchronization into a complete media pipeline visibility platform.
+
+The goal is to provide a single dashboard showing the health and status of the entire media workflow.
 
 Target workflow:
 
 ```text
-Seerr → Arr → Downloader → Arr → MediaSync → Media Server
+Request
+↓
+Arr Applications
+↓
+Downloader
+↓
+Import
+↓
+MediaSync
+↓
+Media Server
 ```
 
-The long-term goal is a single pane of glass for the full media automation pipeline, including:
+Planned capabilities include:
 
-- who requested media
-- Arr queue state
-- downloader progress and timers
-- import status
-- media-server scan status
-- processor/transcoding state
-- storage savings insight
+- connected application health monitoring
+- green/red connection status indicators
+- yellow/red warning and issue indicators
+- service warning and update notifications
+- request-to-availability tracking
+- downloader queue visibility
+- import progress monitoring
+- library synchronization status
+- Unmanic integration
+- transcoding visibility
+- storage optimization insights
+- end-to-end media pipeline observability
 
-MediaSync aims to reduce app-hopping and make the entire media workflow easier to understand at a glance.
+The long-term objective is a single pane of glass where users can immediately determine the health and status of their entire media stack without jumping between multiple applications.
+
+The planned dashboard direction includes service health tokens on the left side of connected applications to show whether each service is reachable, authenticated, and healthy, with warning tokens on the right side for updates, failed tasks, unreachable paths, configuration issues, and other actionable problems.
 
 ---
 
 ## Screenshots
 
-Screenshots will be added after the first clean deployment validation.
-
-### Dashboard
-
-Monitor imports, activity, source mappings, and library synchronization in real time.
-
 <p align="center">
   <img src="screenshots/mediasync_dashboard.png" alt="MediaSync Dashboard" width="100%">
 </p>
-
-### Guided Setup
-
-Connect your media server, discover libraries, configure sources, and map automation workflows in minutes.
 
 <p align="center">
   <img src="screenshots/mediasync_setup.png" alt="MediaSync Setup Wizard" width="100%">
@@ -223,7 +254,7 @@ After deployment:
 
 1. Open the MediaSync web UI.
 2. Complete first-run setup.
-3. Configure the MediaSync URL used for webhook registration.
+3. Configure the MediaSync URL.
 4. Add Radarr and/or Sonarr sources.
 5. Test each source.
 6. Select compatible media-server libraries.
@@ -234,7 +265,7 @@ After deployment:
 
 ## Notes
 
-MediaSync should be reachable by Radarr and Sonarr at the configured MediaSync URL so webhook registration can work correctly.
+MediaSync should be reachable by Radarr and Sonarr at the configured MediaSync URL so automatic webhook registration can function correctly.
 
 If using a reverse proxy, configure the MediaSync URL with the externally reachable address, for example:
 
