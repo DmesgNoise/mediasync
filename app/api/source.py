@@ -350,19 +350,44 @@ def get_compatible_libraries(source_type: str) -> list[dict]:
         return []
 
     libraries = provider.get_libraries()
+    normalized_source_type = str(source_type or "").strip().lower()
 
-    if source_type == "radarr":
+    radarr_blocked_types = {
+        "tv",
+        "tvshow",
+        "tvshows",
+        "series",
+        "show",
+        "shows",
+        "music",
+        "musicvideos",
+        "musicvideo",
+        "games",
+        "game",
+    }
+
+    sonarr_blocked_types = {
+        "movie",
+        "movies",
+        "music",
+        "musicvideos",
+        "musicvideo",
+        "games",
+        "game",
+    }
+
+    if normalized_source_type == "radarr":
         return [
             library
             for library in libraries
-            if library["type"] == "movies"
+            if str(library.get("type", "unknown")).strip().lower() not in radarr_blocked_types
         ]
 
-    if source_type == "sonarr":
+    if normalized_source_type == "sonarr":
         return [
             library
             for library in libraries
-            if library["type"] == "tvshows"
+            if str(library.get("type", "unknown")).strip().lower() not in sonarr_blocked_types
         ]
 
     return []

@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from app.database import add_activity_event
+from app.database import add_activity_event, get_or_create_lifecycle, update_lifecycle_status
 from app.providers.request_apps.base import build_request_app_provider
 
 STATE_PATH = Path("/config/request_activity_state.json")
@@ -141,6 +141,22 @@ def _build_request_state(provider: Any, request_item: dict[str, Any]) -> dict[st
     }
 
 
+def _get_or_create_request_lifecycle(request_app: dict[str, Any], state: dict[str, Any], status: str = "requested"):
+    return get_or_create_lifecycle(
+        media_type=state.get("media_type"),
+        title=state.get("title"),
+        tmdb_id=state.get("tmdb_id"),
+        tvdb_id=state.get("tvdb_id"),
+        imdb_id=state.get("imdb_id"),
+        created_by=state.get("requested_by") or "",
+        source_app=request_app.get("app_name") or "Seerr",
+        source_type=request_app.get("app_type") or "seerr",
+        quality_profile=state.get("quality_profile") or "",
+        poster_url=state.get("poster_url") or "",
+        status=status or "requested",
+    )
+
+
 def _fetch_title(provider: Any, media_type: str, tmdb_id: Any) -> str | None:
     if not tmdb_id or not hasattr(provider, "_get"):
         return None
@@ -167,20 +183,7 @@ def _fetch_title(provider: Any, media_type: str, tmdb_id: Any) -> str | None:
 
 
 def _add_requested_event(request_app: dict[str, Any], state: dict[str, Any]) -> None:
-    requester = state.get("requested_by") or "Someone"
-    title = state.get("title") or "Unknown Title"
-    media_label = state.get("media_label") or "media item"
-
-    sentence = f"{requester} requested the {media_label} {title}"
-
-    add_activity_event(
-        event_type=sentence,
-        status="success",
-        source_name=request_app.get("app_name") or "Seerr",
-        source_type=request_app.get("app_type") or "seerr",
-        media_title=sentence,
-        details=_details(state),
-    )
+    _get_or_create_request_lifecycle(request_app, state, "requested")
 
 
 def _add_simple_event(
@@ -189,17 +192,23 @@ def _add_simple_event(
     action: str,
     status: str,
 ) -> None:
-    title = state.get("title") or "Unknown Title"
-    sentence = f"{title} {action}"
+    lifecycle_id = _get_or_create_request_lifecycle(request_app, state, action or "requested")
 
-    add_activity_event(
-        event_type=sentence,
-        status=status,
-        source_name=request_app.get("app_name") or "Seerr",
-        source_type=request_app.get("app_type") or "seerr",
-        media_title=sentence,
-        details=_details(state),
-    )
+    if action == "denied":
+        title = state.get("title") or "Unknown Title"
+        add_activity_event(
+            event_type=f"{title} denied",
+            status=status,
+            source_name=request_app.get("app_name") or "Seerr",
+            source_type=request_app.get("app_type") or "seerr",
+            media_title=title,
+            details=_details(state),
+            lifecycle_id=lifecycle_id,
+            lifecycle_stage="Denied",
+        )
+        return
+
+    update_lifecycle_status(lifecycle_id, action or "requested")
 
 
 def _details(state: dict[str, Any]) -> str:

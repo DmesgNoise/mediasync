@@ -44,14 +44,14 @@
             <div class="dashboard-2-section-header">
                 <div>
                     <div class="dashboard-2-card-title">Recent Activity</div>
-                    <div class="dashboard-2-card-subtitle">Latest media stack events</div>
+                    <div class="dashboard-2-card-subtitle">Click any item for details.</div>
                 </div>
             </div>
 
             {% if recent_events %}
                 <div class="dashboard-2-activity-list" data-dashboard-activity-feed data-dashboard-file-detail="{{ settings['activity_file_detail'] }}">
                     {% for event in recent_events %}
-                        <div class="dashboard-2-activity-row {{ event['status'] }}{% if event['lifecycle_id'] %} lifecycle-clickable{% endif %}"{% if event['lifecycle_id'] %} data-lifecycle-id="{{ event['lifecycle_id'] }}" data-lifecycle-display-title="{{ event["media_title"] or event["event_type"] }}" role="button" tabindex="0" title="Open lifecycle"{% endif %}>
+                        <div class="dashboard-2-activity-row {{ event['status'] }}{% if event['lifecycle_id'] %} lifecycle-clickable{% endif %}"{% if event['lifecycle_id'] %} data-lifecycle-id="{{ event['lifecycle_id'] }}" data-lifecycle-display-title="{{ event["media_title"] or event["event_type"] }}" role="button" tabindex="0" title="Open details"{% endif %}>
                             <div class="dashboard-2-activity-dot"></div>
 
                             <div class="dashboard-2-activity-body">
@@ -279,7 +279,7 @@
         </div>
 
         <div class="lifecycle-modal-body" data-lifecycle-modal-body>
-            <div class="lifecycle-loading">Loading lifecycle…</div>
+            <div class="lifecycle-loading">Loading details…</div>
         </div>
     </div>
 </div>

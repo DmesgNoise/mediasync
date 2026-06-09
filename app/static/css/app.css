@@ -5429,3 +5429,1060 @@ body.modal-open {
         flex-basis: 100%;
     }
 }
+
+/* ---------- MediaSync 2.1 Compact Settings Source Management ---------- */
+
+.settings-card-sources {
+    border-color: var(--theme-primary-border, rgba(50, 209, 125, 0.30));
+    box-shadow:
+        0 18px 46px rgba(0, 0, 0, 0.20),
+        inset 3px 0 0 var(--theme-primary, #32d17d);
+}
+
+.settings-card-header-actions {
+    align-items: flex-start;
+}
+
+.settings-helper-text {
+    margin: 8px 0 0;
+    color: var(--theme-primary, #32d17d);
+    font-size: 0.86rem;
+    font-weight: 800;
+}
+
+.settings-source-list-compact {
+    gap: 10px;
+}
+
+.settings-source-compact,
+.settings-source-item.settings-source-compact,
+.settings-source-item.settings-source-compact.editable {
+    display: grid !important;
+    grid-template-columns: 24px 44px minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 12px !important;
+    padding: 12px !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(125, 154, 174, 0.36) !important;
+    background:
+        linear-gradient(90deg, var(--theme-primary-soft, rgba(50, 209, 125, 0.10)), transparent 34%),
+        rgba(9, 18, 27, 0.58) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.025);
+}
+
+.settings-source-compact.is-editing {
+    border-color: var(--theme-primary-border, rgba(50, 209, 125, 0.38)) !important;
+    background:
+        linear-gradient(90deg, var(--theme-primary-soft, rgba(50, 209, 125, 0.14)), transparent 36%),
+        rgba(10, 20, 30, 0.76) !important;
+}
+
+.settings-source-logo,
+.settings-source-item.settings-source-compact > img.settings-source-logo {
+    width: 42px !important;
+    height: 42px !important;
+    object-fit: contain !important;
+    margin: 2px 0 0 !important;
+}
+
+.settings-source-main {
+    min-width: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.settings-source-static {
+    display: grid;
+    gap: 10px;
+}
+
+.settings-source-static-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.settings-source-name-static {
+    color: #f4fafc;
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.15;
+}
+
+.settings-source-meta {
+    margin-top: 3px;
+    color: rgba(184, 202, 216, 0.82);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.settings-source-meta span {
+    color: rgba(184, 202, 216, 0.42);
+    margin: 0 6px;
+}
+
+.settings-source-library-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-source-library-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 260px;
+    padding: 5px 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(125, 154, 174, 0.24);
+    background: rgba(5, 12, 18, 0.52);
+    color: rgba(232, 242, 246, 0.90);
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+.settings-source-library-chip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.settings-source-library-chip .library-image,
+.settings-source-library-chip .library-icon,
+.settings-source-library-chip .library-icon-fallback {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    border-radius: 8px !important;
+    font-size: 0.82rem !important;
+}
+
+.settings-source-no-libraries {
+    color: rgba(184, 202, 216, 0.70);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.settings-source-edit {
+    display: grid;
+    gap: 10px;
+}
+
+.settings-source-edit-title {
+    color: var(--theme-primary, #32d17d);
+    font-size: 0.82rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.settings-source-form-grid,
+.settings-source-edit .form-grid.settings-source-form-grid {
+    grid-template-columns: 1.05fr 0.75fr 1.2fr 1.2fr;
+    gap: 10px;
+    margin-top: 0;
+}
+
+.settings-source-form-grid label {
+    gap: 5px;
+}
+
+.settings-source-form-grid label span {
+    font-size: 0.74rem;
+    color: rgba(184, 202, 216, 0.78);
+}
+
+.settings-source-form-grid input,
+.settings-source-form-grid select {
+    min-height: 38px;
+    padding: 9px 10px;
+    border-radius: 11px;
+    font-size: 0.86rem;
+}
+
+.settings-source-form-grid input::placeholder {
+    color: rgba(184, 202, 216, 0.46);
+}
+
+.settings-source-form-grid .settings-secret-row {
+    gap: 6px;
+}
+
+.settings-source-form-grid .settings-secret-row .mini-action-button {
+    padding: 8px 10px;
+}
+
+.source-library-results {
+    margin-top: 0;
+    padding: 10px;
+    border-radius: 14px;
+    border-color: rgba(125, 154, 174, 0.24);
+    background: rgba(5, 12, 18, 0.42);
+}
+
+.source-placeholder {
+    margin-top: 0;
+    padding: 12px;
+}
+
+.library-results-header {
+    margin-bottom: 10px;
+}
+
+.library-results-header h3 {
+    font-size: 0.92rem;
+}
+
+.library-results-header p {
+    font-size: 0.78rem;
+}
+
+.settings-library-grid-compact,
+.source-library-results .library-grid.settings-library-grid-compact {
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 8px;
+}
+
+.source-library-option {
+    gap: 9px !important;
+    padding: 8px !important;
+    border-radius: 12px !important;
+    background: rgba(9, 18, 27, 0.72) !important;
+    border: 1px solid rgba(125, 154, 174, 0.20) !important;
+}
+
+.source-library-option .library-image,
+.source-library-option .library-icon,
+.source-library-option .library-icon-fallback {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    border-radius: 9px !important;
+    font-size: 0.9rem !important;
+}
+
+.source-library-option .library-name {
+    font-size: 0.84rem;
+    margin-bottom: 1px;
+}
+
+.source-library-option .library-type {
+    font-size: 0.72rem;
+}
+
+.settings-source-actions-compact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.settings-source-actions-compact .mini-action-button {
+    padding: 8px 11px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+}
+
+.settings-source-actions-compact [data-source-refresh-libraries] {
+    border-color: var(--theme-primary-border, rgba(50, 209, 125, 0.28));
+    color: var(--theme-primary, #32d17d);
+}
+
+.settings-source-actions-compact [data-source-edit-button] {
+    border-color: rgba(125, 154, 174, 0.34);
+    color: #dcebf1;
+}
+
+.settings-result {
+    margin-top: 0;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 0.84rem;
+}
+
+.source-order-controls {
+    margin-top: 2px;
+}
+
+.drag-handle {
+    margin-top: 0;
+    color: var(--theme-primary, #32d17d);
+}
+
+@media (max-width: 1200px) {
+    .settings-source-form-grid,
+    .settings-source-edit .form-grid.settings-source-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .settings-source-compact,
+    .settings-source-item.settings-source-compact,
+    .settings-source-item.settings-source-compact.editable {
+        grid-template-columns: 28px 42px minmax(0, 1fr) !important;
+    }
+
+    .settings-source-form-grid,
+    .settings-source-edit .form-grid.settings-source-form-grid,
+    .settings-library-grid-compact,
+    .source-library-results .library-grid.settings-library-grid-compact {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---------- MediaSync 2.1 Compact Settings Full Page Pass ---------- */
+
+.settings-grid-v2 {
+    gap: 16px;
+}
+
+.settings-card-themed,
+.settings-card.settings-card-themed {
+    border-color: color-mix(in srgb, var(--theme-primary, #32d17d) 28%, rgba(125, 154, 174, 0.34));
+    box-shadow:
+        0 16px 42px rgba(0, 0, 0, 0.18),
+        inset 2px 0 0 var(--theme-primary, #32d17d),
+        inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.settings-card,
+.card.settings-card {
+    padding: 18px;
+}
+
+.settings-card-header {
+    margin-bottom: 12px;
+}
+
+.settings-card-header h2 {
+    margin-bottom: 3px;
+}
+
+.settings-card-header .card-muted,
+.settings-card > .card-muted {
+    line-height: 1.35;
+}
+
+.settings-field-stack {
+    gap: 10px;
+}
+
+.settings-row {
+    padding: 10px 0;
+    gap: 12px;
+}
+
+.settings-row + .settings-row {
+    border-top: 1px solid rgba(125, 154, 174, 0.16);
+}
+
+.settings-title {
+    font-size: 0.92rem;
+}
+
+.settings-description {
+    font-size: 0.82rem;
+    line-height: 1.25;
+}
+
+.settings-actions {
+    margin-top: 12px;
+}
+
+.settings-card-media .settings-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+}
+
+.settings-card-media .settings-field-stack label,
+.settings-card-url .settings-field-stack label {
+    gap: 5px;
+}
+
+.settings-card-media input,
+.settings-card-media select,
+.settings-card-url input,
+.settings-card-tv select,
+.settings-card-activity select {
+    min-height: 40px;
+    padding: 9px 12px;
+    border-radius: 12px;
+}
+
+.settings-card-url form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+}
+
+.settings-card-url .settings-field-stack,
+.settings-card-url .settings-actions {
+    margin: 0;
+}
+
+.settings-card-tv .settings-row,
+.settings-card-activity .settings-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 360px);
+    align-items: center;
+}
+
+.settings-card-tv .settings-select,
+.settings-card-activity .settings-select {
+    min-width: 0;
+}
+
+.settings-card-activity .settings-radio-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.settings-card-activity .settings-radio-option {
+    padding: 10px;
+    border-radius: 12px;
+}
+
+.settings-card-compact-integrations .settings-card-header {
+    align-items: center;
+}
+
+.settings-card-compact-integrations .settings-source-list {
+    gap: 10px;
+}
+
+.settings-card-compact-integrations .settings-source-item.editable {
+    display: grid !important;
+    grid-template-columns: 46px minmax(0, 1fr) !important;
+    gap: 12px !important;
+    align-items: start !important;
+    padding: 12px !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(125, 154, 174, 0.36) !important;
+    background:
+        linear-gradient(90deg, var(--theme-primary-soft, rgba(50, 209, 125, 0.10)), transparent 26%),
+        rgba(9, 18, 27, 0.56) !important;
+}
+
+.settings-card-compact-integrations .source-order-controls:empty {
+    display: none;
+}
+
+.settings-card-compact-integrations .settings-source-item.editable > img {
+    width: 42px !important;
+    height: 42px !important;
+    object-fit: contain !important;
+    margin: 2px 0 0 !important;
+}
+
+.settings-card-compact-integrations .settings-source-edit {
+    display: grid;
+    gap: 9px;
+}
+
+.settings-card-compact-integrations .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+    margin-top: 0;
+}
+
+.settings-card-compact-integrations .form-grid label {
+    gap: 5px;
+}
+
+.settings-card-compact-integrations .form-grid label span {
+    font-size: 0.74rem;
+    color: rgba(184, 202, 216, 0.78);
+}
+
+.settings-card-compact-integrations input,
+.settings-card-compact-integrations select {
+    min-height: 38px;
+    padding: 9px 10px;
+    border-radius: 11px;
+    font-size: 0.86rem;
+}
+
+.settings-card-compact-integrations .settings-description {
+    margin-top: 0;
+    font-size: 0.8rem;
+}
+
+.settings-card-compact-integrations .settings-source-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 0;
+}
+
+.settings-card-compact-integrations .mini-action-button {
+    padding: 8px 11px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+}
+
+.settings-card-sources {
+    border-color: color-mix(in srgb, var(--theme-primary, #32d17d) 42%, rgba(125, 154, 174, 0.36));
+}
+
+.settings-reset-strip {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 10px;
+    justify-items: stretch;
+    margin-top: 2px;
+}
+
+.settings-reset-button,
+.danger-button.settings-reset-button {
+    width: 100%;
+    min-height: 58px;
+    justify-content: center;
+    border-radius: 18px;
+    border-color: rgba(255, 93, 93, 0.46);
+    background:
+        linear-gradient(135deg, rgba(255, 93, 93, 0.22), rgba(255, 93, 93, 0.08)),
+        rgba(9, 18, 27, 0.72);
+    color: #ff8f8f;
+    font-size: 1rem;
+    font-weight: 900;
+    box-shadow:
+        0 16px 42px rgba(0, 0, 0, 0.18),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.025);
+}
+
+.settings-reset-button:hover,
+.danger-button.settings-reset-button:hover {
+    background:
+        linear-gradient(135deg, rgba(255, 93, 93, 0.32), rgba(255, 93, 93, 0.12)),
+        rgba(12, 20, 28, 0.84);
+    border-color: rgba(255, 93, 93, 0.70);
+}
+
+.settings-reset-strip .settings-result {
+    margin-top: 0;
+}
+
+@media (max-width: 1100px) {
+    .settings-card-url form,
+    .settings-card-tv .settings-row,
+    .settings-card-activity .settings-row {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-card-url .settings-actions {
+        justify-content: flex-end;
+    }
+}
+
+@media (max-width: 760px) {
+    .settings-card-compact-integrations .settings-source-item.editable,
+    .settings-card-compact-integrations .form-grid,
+    .settings-card-activity .settings-radio-group {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ---------- MediaSync 2.1 Settings Top Layout Tightening ---------- */
+
+.settings-top-layout {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(420px, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.settings-top-left,
+.settings-top-right {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+}
+
+.settings-pill-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.settings-pill-connected {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.settings-card-media .settings-row:first-of-type {
+    border-bottom: 1px solid rgba(125, 154, 174, 0.16);
+    padding-bottom: 10px;
+}
+
+.settings-card-media .settings-field-stack {
+    margin-top: 12px;
+}
+
+.settings-card-media .settings-card-header,
+.settings-card-url .settings-card-header,
+.settings-card-tv .settings-card-header {
+    margin-bottom: 10px;
+}
+
+.settings-card-url {
+    min-height: 0;
+}
+
+.settings-card-tv {
+    min-height: 0;
+}
+
+.settings-card-url form {
+    align-items: end;
+}
+
+@media (min-width: 1200px) {
+    .settings-card-media .settings-field-stack {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .settings-card-media .settings-field-stack label:first-child,
+    .settings-card-media .settings-field-stack label:nth-of-type(2) {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 1100px) {
+    .settings-top-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* ---------- MediaSync 2.1 Full-Width Settings Stack ---------- */
+
+.settings-grid.settings-grid-v2,
+.settings-grid-v2 {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    align-items: stretch !important;
+}
+
+.settings-top-layout,
+.settings-top-left,
+.settings-top-right {
+    display: contents !important;
+}
+
+.settings-card-fullrow,
+.settings-card-wide,
+.settings-reset-strip {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+}
+
+.settings-card.settings-card-themed,
+.card.settings-card.settings-card-themed {
+    padding: 14px 16px !important;
+    border-color: color-mix(in srgb, var(--theme-primary, #32d17d) 34%, rgba(125,154,174,.34)) !important;
+    box-shadow:
+        0 12px 34px rgba(0,0,0,.16),
+        inset 3px 0 0 var(--theme-primary, #32d17d),
+        inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+
+.settings-card-header,
+.settings-card-header-inline {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 14px !important;
+    margin-bottom: 10px !important;
+}
+
+.settings-card-header h2 {
+    margin-bottom: 2px !important;
+}
+
+.settings-card-header .card-muted {
+    margin-bottom: 0 !important;
+    line-height: 1.25 !important;
+}
+
+.settings-pill-group {
+    flex: 0 0 auto;
+}
+
+.settings-field-stack,
+.settings-field-stack-compact {
+    margin-top: 0 !important;
+    gap: 10px !important;
+}
+
+.settings-row {
+    padding: 8px 0 !important;
+}
+
+.settings-title {
+    font-size: .9rem !important;
+}
+
+.settings-description {
+    margin-top: 3px !important;
+    font-size: .8rem !important;
+    line-height: 1.22 !important;
+}
+
+.settings-actions {
+    margin-top: 10px !important;
+}
+
+.settings-card-media .settings-field-stack-compact {
+    display: grid !important;
+    grid-template-columns: minmax(260px, 1.55fr) minmax(250px, 1.4fr) minmax(180px, .85fr) minmax(220px, 1fr) !important;
+    align-items: end !important;
+}
+
+.settings-card-media .settings-actions {
+    justify-content: flex-end !important;
+}
+
+.settings-card-url form {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: end !important;
+    gap: 12px !important;
+}
+
+.settings-card-url .settings-field-stack,
+.settings-card-url .settings-actions {
+    margin: 0 !important;
+}
+
+.settings-card-tv form {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto !important;
+    gap: 12px !important;
+    align-items: end !important;
+}
+
+.settings-card-tv .settings-row,
+.settings-card-activity .settings-row {
+    display: block !important;
+    padding: 0 !important;
+    border-top: 0 !important;
+}
+
+.settings-card-tv .settings-actions,
+.settings-card-activity .settings-actions {
+    margin: 0 !important;
+    align-self: end !important;
+}
+
+.settings-card-tv select,
+.settings-card-activity select,
+.settings-card-media input,
+.settings-card-media select,
+.settings-card-url input {
+    min-height: 38px !important;
+    padding: 8px 11px !important;
+    border-radius: 12px !important;
+}
+
+.settings-card-tv .settings-select,
+.settings-card-activity .settings-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-top: 6px !important;
+}
+
+.settings-card-activity form {
+    display: grid !important;
+    grid-template-columns: minmax(150px, .85fr) minmax(150px, .85fr) minmax(310px, 1.4fr) auto auto !important;
+    gap: 12px !important;
+    align-items: end !important;
+}
+
+.settings-card-activity .settings-row-stack {
+    display: block !important;
+}
+
+.settings-card-activity .settings-radio-group {
+    display: flex !important;
+    gap: 8px !important;
+    margin-top: 6px !important;
+}
+
+.settings-card-activity .settings-radio-option {
+    min-width: 0 !important;
+    padding: 8px 10px !important;
+    border-radius: 12px !important;
+}
+
+.settings-card-activity .settings-radio-option small {
+    display: none !important;
+}
+
+.settings-card-activity .danger-button {
+    min-height: 38px !important;
+    white-space: nowrap !important;
+}
+
+.settings-card-compact-integrations .settings-source-item.editable {
+    padding: 10px 12px !important;
+}
+
+.settings-card-compact-integrations .form-grid {
+    gap: 8px 12px !important;
+}
+
+.settings-card-compact-integrations .settings-source-actions {
+    margin-top: 0 !important;
+}
+
+.settings-reset-strip {
+    padding: 0 !important;
+    margin: 0 !important;
+    display: grid !important;
+    gap: 10px !important;
+}
+
+.settings-reset-button,
+.danger-button.settings-reset-button {
+    width: 100% !important;
+    min-height: 64px !important;
+    justify-content: center !important;
+    border-radius: 18px !important;
+    border-color: rgba(255, 93, 93, .56) !important;
+    background:
+        linear-gradient(135deg, rgba(255,93,93,.28), rgba(255,93,93,.10)),
+        rgba(9,18,27,.76) !important;
+    color: #ff9b9b !important;
+    font-size: 1.03rem !important;
+    font-weight: 950 !important;
+    letter-spacing: .02em !important;
+    text-transform: uppercase !important;
+}
+
+.settings-reset-button:hover,
+.danger-button.settings-reset-button:hover {
+    border-color: rgba(255, 93, 93, .78) !important;
+    background:
+        linear-gradient(135deg, rgba(255,93,93,.38), rgba(255,93,93,.15)),
+        rgba(12,20,28,.88) !important;
+}
+
+@media (max-width: 1350px) {
+    .settings-card-media .settings-field-stack-compact,
+    .settings-card-tv form,
+    .settings-card-activity form {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .settings-card-tv .settings-actions,
+    .settings-card-activity .settings-actions {
+        justify-content: flex-end !important;
+    }
+}
+
+@media (max-width: 820px) {
+    .settings-card-header,
+    .settings-card-header-inline,
+    .settings-card-url form,
+    .settings-card-media .settings-field-stack-compact,
+    .settings-card-tv form,
+    .settings-card-activity form {
+        grid-template-columns: 1fr !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .settings-pill-group,
+    .settings-actions,
+    .settings-card-url .settings-actions,
+    .settings-card-tv .settings-actions,
+    .settings-card-activity .settings-actions {
+        justify-content: flex-start !important;
+    }
+
+    .settings-card-activity .settings-radio-group {
+        flex-direction: column !important;
+    }
+}
+
+/* ---------- MediaSync 2.1 Static/Edit Request Apps + Downloaders ---------- */
+
+.settings-card-integrations-static .settings-card-header {
+    align-items: center;
+}
+
+.settings-integration-list-compact {
+    gap: 10px;
+}
+
+.settings-integration-compact,
+.settings-source-item.settings-integration-compact {
+    display: grid !important;
+    grid-template-columns: 44px minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 12px !important;
+    padding: 12px !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(125, 154, 174, 0.36) !important;
+    background:
+        linear-gradient(90deg, var(--theme-primary-soft, rgba(50, 209, 125, 0.10)), transparent 34%),
+        rgba(9, 18, 27, 0.58) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.025);
+}
+
+.settings-integration-compact.is-editing {
+    border-color: var(--theme-primary-border, rgba(50, 209, 125, 0.38)) !important;
+    background:
+        linear-gradient(90deg, var(--theme-primary-soft, rgba(50, 209, 125, 0.14)), transparent 36%),
+        rgba(10, 20, 30, 0.76) !important;
+}
+
+.settings-integration-compact > img.settings-source-logo,
+.settings-integration-compact > img[data-request-app-logo],
+.settings-integration-compact > img[data-downloader-logo] {
+    width: 42px !important;
+    height: 42px !important;
+    object-fit: contain !important;
+    margin: 2px 0 0 !important;
+}
+
+.settings-integration-main {
+    min-width: 0;
+    display: grid;
+    gap: 9px;
+}
+
+.settings-integration-static {
+    display: grid;
+    gap: 4px;
+}
+
+.settings-integration-url {
+    margin-top: 5px;
+    color: rgba(184, 202, 216, 0.78);
+    font-size: 0.82rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.settings-integration-actions {
+    margin-top: 0;
+}
+
+.settings-integration-actions [data-request-app-save],
+.settings-integration-actions [data-downloader-save] {
+    color: var(--theme-primary, #32d17d);
+    border-color: var(--theme-primary-border, rgba(50, 209, 125, 0.28));
+}
+
+.settings-card-integrations-static .settings-source-edit {
+    gap: 9px;
+}
+
+.settings-card-integrations-static .settings-result {
+    margin-top: 0;
+}
+
+@media (max-width: 760px) {
+    .settings-integration-compact,
+    .settings-source-item.settings-integration-compact {
+        grid-template-columns: 42px minmax(0, 1fr) !important;
+    }
+}
+
+
+/* ---------- MediaSync 2.1 Normal Reset Configuration Button ---------- */
+
+.settings-reset-strip,
+.settings-reset-strip.settings-card-fullrow {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    margin: 0 !important;
+    padding: 0 0 4px !important;
+    justify-items: start !important;
+}
+
+.settings-reset-copy h2 {
+    margin: 0 0 3px !important;
+    color: #f6fafc !important;
+    font-size: 1.02rem !important;
+    font-weight: 900 !important;
+}
+
+.settings-reset-copy p {
+    margin: 0 !important;
+    color: rgba(180, 198, 210, 0.74) !important;
+    font-size: 0.86rem !important;
+    line-height: 1.3 !important;
+}
+
+.settings-reset-button,
+.danger-button.settings-reset-button {
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    justify-content: center !important;
+    align-self: flex-start !important;
+    padding: 10px 16px !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 93, 93, 0.36) !important;
+    background: rgba(255, 93, 93, 0.10) !important;
+    color: #ff7b7b !important;
+    font-size: 0.82rem !important;
+    font-weight: 900 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    box-shadow: none !important;
+}
+
+.settings-reset-button:hover,
+.danger-button.settings-reset-button:hover {
+    background: rgba(255, 93, 93, 0.16) !important;
+    border-color: rgba(255, 93, 93, 0.58) !important;
+    color: #ff9b9b !important;
+}
+
+.settings-reset-strip .settings-result {
+    align-self: stretch !important;
+    margin-top: 2px !important;
+}
+
+/* ---------- Media activity feed origin/order fix ---------- */
+.activity-page-event[data-lifecycle-id] {
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.activity-page-event[data-lifecycle-id]:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.16);
+    transform: translateY(-1px);
+}
+
+.activity-page-event[data-lifecycle-id]::after {
+    content: "›";
+    align-self: center;
+    color: rgba(220, 235, 245, 0.62);
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+.activity-page-event[data-lifecycle-id]:hover::after {
+    color: rgba(255, 255, 255, 0.95);
+}

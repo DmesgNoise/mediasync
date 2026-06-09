@@ -11,40 +11,30 @@
 
 <section class="settings-grid settings-grid-v2">
 
-    <section class="card settings-card">
-        <div class="settings-card-header">
+    <div class="settings-top-layout">
+        <div class="settings-top-left">
+            <section class="card settings-card settings-card-themed settings-card-media settings-card-fullrow">
+        <div class="settings-card-header settings-card-header-inline">
             <div>
                 <h2>Media Server</h2>
                 <p class="card-muted">Manage the active media server and activity timezone.</p>
             </div>
-        </div>
 
-        <form data-settings-media-form>
-            <div class="settings-row">
-                <div>
-                    <div class="settings-title">Enabled Server</div>
-                    <div class="settings-description">Current selected media server type.</div>
-                </div>
-
+            <div class="settings-pill-group">
                 <div class="settings-pill good">
                     {{ media_server["server_type"]|capitalize if media_server else "None" }}
                 </div>
-            </div>
-
-            <div class="settings-row">
-                <div>
-                    <div class="settings-title">Connection Status</div>
-                    <div class="settings-description">MediaSync uses this server for library scans.</div>
-                </div>
 
                 {% if media_server and media_server["connected"] %}
-                    <div class="settings-pill good">Connected</div>
+                    <div class="settings-pill good settings-pill-connected">✓ Connected</div>
                 {% else %}
-                    <div class="settings-pill warning">Disconnected</div>
+                    <div class="settings-pill warning settings-pill-connected">Disconnected</div>
                 {% endif %}
             </div>
+        </div>
 
-            <div class="settings-field-stack">
+        <form data-settings-media-form>
+            <div class="settings-field-stack settings-field-stack-compact">
                 <label>
                     <span>Server URL</span>
                     <input
@@ -103,10 +93,14 @@
                 </button>
             </div>
         </form>
-    </section>
+            </section>
+        </div>
+
+        <div class="settings-top-right">
 
 
-    <section class="card settings-card">
+
+            <section class="card settings-card settings-card-themed settings-card-url settings-card-fullrow">
         <div class="settings-card-header">
             <div>
                 <h2>MediaSync URL</h2>
@@ -138,9 +132,9 @@
                 </button>
             </div>
         </form>
-    </section>
+            </section>
 
-    <section class="card settings-card">
+            <section class="card settings-card settings-card-themed settings-card-tv settings-card-fullrow">
         <div class="settings-card-header">
             <div>
                 <h2>TV Sync</h2>
@@ -194,9 +188,13 @@
                 <button class="primary-button" type="submit">Save TV Sync</button>
             </div>
         </form>
-    </section>
+            </section>
 
-    <section class="card settings-card">
+
+        </div>
+    </div>
+
+    <section class="card settings-card settings-card-themed settings-card-activity settings-card-fullrow">
         <div class="settings-card-header">
             <div>
                 <h2>Activity</h2>
@@ -283,8 +281,8 @@
         </form>
     </section>
 
-    <section class="card settings-card settings-card-wide">
-        <div class="settings-card-header">
+    <section class="card settings-card settings-card-wide settings-card-themed settings-card-request-apps settings-card-integrations-static settings-card-fullrow">
+        <div class="settings-card-header settings-card-header-actions">
             <div>
                 <h2>Request Apps</h2>
                 <p class="card-muted">Connect request management applications and enrich MediaSync activity with request, user, and media metadata.</p>
@@ -295,65 +293,72 @@
             </button>
         </div>
 
-        <div class="settings-source-list" data-request-app-list>
+        <div class="settings-source-list settings-integration-list-compact" data-request-app-list>
             {% if request_apps %}
                 {% for request_app in request_apps %}
                     <div
-                        class="settings-source-item editable"
+                        class="settings-source-item settings-integration-compact is-saved"
                         data-request-app-row
                         data-request-app-id="{{ request_app['id'] }}"
                         data-request-app-version="{{ request_app['version'] or 'Unknown' }}"
                         data-connection-valid="{{ 'true' if request_app['connected'] else 'false' }}"
+                        data-editing="false"
                     >
-                        <div class="source-order-controls"></div>
-
                         <img
+                            class="settings-source-logo"
                             src="/static/img/{{ request_app['app_type'] }}-logo.png"
                             alt="{{ request_app['app_name'] }}"
                             data-request-app-logo
                         >
 
-                        <div class="settings-source-edit">
-                            <div class="form-grid">
-                                <label>
-                                    <span>Request App Name</span>
-                                    <input name="app_name" type="text" value="{{ request_app['app_name'] }}">
-                                </label>
-
-                                <label>
-                                    <span>Request App Type</span>
-                                    <select class="settings-select" name="app_type" data-request-app-type>
-                                        <option value="seerr" {% if request_app["app_type"] == "seerr" %}selected{% endif %}>Seerr</option>
-                                    </select>
-                                </label>
-
-                                <label>
-                                    <span>Server URL</span>
-                                    <input name="app_url" type="text" value="{{ request_app['app_url'] }}">
-                                </label>
-
-                                <label>
-                                    <span>API Key</span>
-                                    <div class="settings-secret-row">
-                                        <input name="api_key" type="password" value="{{ request_app['api_key'] }}">
-                                        <button class="mini-action-button" type="button" data-toggle-secret>Show</button>
+                        <div class="settings-integration-main">
+                            <div class="settings-integration-static" data-request-app-static>
+                                <div>
+                                    <div class="settings-source-name-static" data-request-app-static-name>{{ request_app["app_name"] }}</div>
+                                    <div class="settings-source-meta" data-request-app-static-meta>
+                                        v{{ request_app["version"] or "Unknown" }}
+                                        <span>•</span>
+                                        {% if request_app["connected"] %}Connected{% else %}Disconnected{% endif %}
                                     </div>
-                                </label>
+                                    <div class="settings-integration-url" data-request-app-static-url>{{ request_app["app_url"] }}</div>
+                                </div>
                             </div>
 
-                            <div class="settings-description">
-                                {{ request_app["app_type"]|capitalize }}
-                                → v{{ request_app["version"] or "Unknown" }}
-                                {% if request_app["connected"] %}
-                                    → Connected
-                                {% else %}
-                                    → Disconnected
-                                {% endif %}
+                            <div class="settings-source-edit hidden" data-request-app-edit>
+                                <div class="settings-source-edit-title">Edit Request App</div>
+
+                                <div class="form-grid settings-source-form-grid">
+                                    <label>
+                                        <span>Request App Name</span>
+                                        <input name="app_name" type="text" placeholder="Enter request app name" value="{{ request_app['app_name'] }}">
+                                    </label>
+
+                                    <label>
+                                        <span>Request App Type</span>
+                                        <select class="settings-select" name="app_type" data-request-app-type>
+                                            <option value="seerr" {% if request_app["app_type"] == "seerr" %}selected{% endif %}>Seerr</option>
+                                        </select>
+                                    </label>
+
+                                    <label>
+                                        <span>Server URL</span>
+                                        <input name="app_url" type="text" placeholder="Enter server URL" value="{{ request_app['app_url'] }}">
+                                    </label>
+
+                                    <label>
+                                        <span>API Key</span>
+                                        <div class="settings-secret-row">
+                                            <input name="api_key" type="password" placeholder="Enter API key" value="{{ request_app['api_key'] }}">
+                                            <button class="mini-action-button" type="button" data-request-app-toggle-secret>Show</button>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
 
-                            <div class="settings-source-actions">
+                            <div class="settings-source-actions-compact settings-integration-actions">
                                 <button class="mini-action-button" type="button" data-request-app-test>Test Connection</button>
-                                <button class="mini-action-button good" type="button" data-request-app-save>Save Request App</button>
+                                <button class="mini-action-button" type="button" data-request-app-edit-button>Edit</button>
+                                <button class="mini-action-button good hidden" type="button" data-request-app-save>Save Request App</button>
                                 <button class="mini-action-button danger" type="button" data-request-app-delete>Delete</button>
                             </div>
 
@@ -372,8 +377,8 @@
     </section>
 
 
-    <section class="card settings-card settings-card-wide">
-        <div class="settings-card-header">
+    <section class="card settings-card settings-card-wide settings-card-themed settings-card-downloaders settings-card-integrations-static settings-card-fullrow">
+        <div class="settings-card-header settings-card-header-actions">
             <div>
                 <h2>Downloaders</h2>
                 <p class="card-muted">Connect download clients so MediaSync can track active downloads, progress, speed, ETA, and lifecycle handoff to imports.</p>
@@ -384,66 +389,75 @@
             </button>
         </div>
 
-        <div class="settings-source-list" data-downloader-list>
+        <div class="settings-source-list settings-integration-list-compact" data-downloader-list>
             {% if downloaders %}
                 {% for downloader in downloaders %}
+                    {% set downloader_type = downloader['downloader_type']|lower %}
+                    {% set downloader_logo = 'sab-logo.png' if downloader_type == 'sabnzbd' else downloader_type ~ '-logo.png' %}
                     <div
-                        class="settings-source-item editable"
+                        class="settings-source-item settings-integration-compact is-saved"
                         data-downloader-row
                         data-downloader-id="{{ downloader['id'] }}"
                         data-downloader-version="{{ downloader['version'] or 'Unknown' }}"
                         data-connection-valid="{{ 'true' if downloader['connected'] else 'false' }}"
+                        data-editing="false"
                     >
-                        <div class="source-order-controls"></div>
-
                         <img
-                            src="/static/img/{{ downloader['downloader_type'] }}-logo.png"
+                            class="settings-source-logo"
+                            src="/static/img/{{ downloader_logo }}"
                             alt="{{ downloader['downloader_name'] }}"
                             data-downloader-logo
                         >
 
-                        <div class="settings-source-edit">
-                            <div class="form-grid">
-                                <label>
-                                    <span>Downloader Name</span>
-                                    <input name="downloader_name" type="text" value="{{ downloader['downloader_name'] }}">
-                                </label>
-
-                                <label>
-                                    <span>Downloader Type</span>
-                                    <select class="settings-select" name="downloader_type" data-downloader-type>
-                                        <option value="sab" {% if downloader["downloader_type"] == "sab" %}selected{% endif %}>SABnzbd</option>
-                                        <option value="sabnzbd" {% if downloader["downloader_type"] == "sabnzbd" %}selected{% endif %}>SABnzbd</option>
-                                    </select>
-                                </label>
-
-                                <label>
-                                    <span>Server URL</span>
-                                    <input name="downloader_url" type="text" value="{{ downloader['downloader_url'] }}">
-                                </label>
-
-                                <label>
-                                    <span>API Key</span>
-                                    <div class="settings-secret-row">
-                                        <input name="api_key" type="password" value="{{ downloader['api_key'] }}">
-                                        <button class="mini-action-button" type="button" data-downloader-toggle-secret>Show</button>
+                        <div class="settings-integration-main">
+                            <div class="settings-integration-static" data-downloader-static>
+                                <div>
+                                    <div class="settings-source-name-static" data-downloader-static-name>{{ downloader["downloader_name"] }}</div>
+                                    <div class="settings-source-meta" data-downloader-static-meta>
+                                        v{{ downloader["version"] or "Unknown" }}
+                                        <span>•</span>
+                                        {% if downloader["connected"] %}Connected{% else %}Disconnected{% endif %}
                                     </div>
-                                </label>
+                                    <div class="settings-integration-url" data-downloader-static-url>{{ downloader["downloader_url"] }}</div>
+                                </div>
                             </div>
 
-                            <div class="settings-description">
-                                {{ "SABnzbd" if downloader["downloader_type"] in ["sab", "sabnzbd"] else downloader["downloader_type"]|capitalize }}
-                                → v{{ downloader["version"] or "Unknown" }}
-                                {% if downloader["connected"] %}
-                                    → Connected
-                                {% else %}
-                                    → Disconnected
-                                {% endif %}
+                            <div class="settings-source-edit hidden" data-downloader-edit>
+                                <div class="settings-source-edit-title">Edit Downloader</div>
+
+                                <div class="form-grid settings-source-form-grid">
+                                    <label>
+                                        <span>Downloader Name</span>
+                                        <input name="downloader_name" type="text" placeholder="Enter downloader name" value="{{ downloader['downloader_name'] }}">
+                                    </label>
+
+                                    <label>
+                                        <span>Downloader Type</span>
+                                        <select class="settings-select" name="downloader_type" data-downloader-type>
+                                            <option value="sab" {% if downloader["downloader_type"] == "sab" %}selected{% endif %}>SABnzbd</option>
+                                            <option value="sabnzbd" {% if downloader["downloader_type"] == "sabnzbd" %}selected{% endif %}>SABnzbd</option>
+                                        </select>
+                                    </label>
+
+                                    <label>
+                                        <span>Server URL</span>
+                                        <input name="downloader_url" type="text" placeholder="Enter server URL" value="{{ downloader['downloader_url'] }}">
+                                    </label>
+
+                                    <label>
+                                        <span>API Key</span>
+                                        <div class="settings-secret-row">
+                                            <input name="api_key" type="password" placeholder="Enter API key" value="{{ downloader['api_key'] }}">
+                                            <button class="mini-action-button" type="button" data-downloader-toggle-secret>Show</button>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
 
-                            <div class="settings-source-actions">
+                            <div class="settings-source-actions-compact settings-integration-actions">
                                 <button class="mini-action-button" type="button" data-downloader-test>Test Connection</button>
-                                <button class="mini-action-button good" type="button" data-downloader-save>Save Downloader</button>
+                                <button class="mini-action-button" type="button" data-downloader-edit-button>Edit</button>
+                                <button class="mini-action-button good hidden" type="button" data-downloader-save>Save Downloader</button>
                                 <button class="mini-action-button danger" type="button" data-downloader-delete>Delete</button>
                             </div>
 
@@ -461,11 +475,12 @@
         {% endif %}
     </section>
 
-    <section class="card settings-card settings-card-wide">
-        <div class="settings-card-header">
+    <section class="card settings-card settings-card-wide settings-card-themed settings-card-sources settings-card-fullrow">
+        <div class="settings-card-header settings-card-header-actions">
             <div>
                 <h2>Configured Sources</h2>
-                <p class="card-muted">Test source connections, refresh compatible libraries, and update source mappings.</p>
+                <p class="card-muted">Manage Radarr and Sonarr connections, refresh mapped libraries, and update scan order.</p>
+                <p class="settings-helper-text">Drag and drop sources to reconfigure their order.</p>
             </div>
 
             <button class="primary-button secondary-action" type="button" data-add-settings-source>
@@ -473,85 +488,46 @@
             </button>
         </div>
 
-        <div class="settings-source-list" data-sortable-sources data-settings-source-list>
+        <div class="settings-source-list settings-source-list-compact" data-sortable-sources data-settings-source-list>
             {% if sources %}
                 {% for source in sources %}
                     <div
-                        class="settings-source-item editable"
+                        class="settings-source-item settings-source-compact is-saved"
                         draggable="true"
                         data-source-row
                         data-source-id="{{ source['id'] }}"
                         data-source-version="{{ source['version'] or 'Unknown' }}"
                         data-connection-valid="true"
+                        data-editing="false"
                     >
                         <div class="source-order-controls">
-                            <div class="drag-handle">↕</div>
+                            <div class="drag-handle" title="Drag to reorder">↕</div>
                             <button class="mini-action-button source-order-button" type="button" data-source-move-up>Up</button>
                             <button class="mini-action-button source-order-button" type="button" data-source-move-down>Down</button>
                         </div>
 
-                        <img src="/static/img/{{ source['source_type'] }}-logo.png" alt="{{ source['source_name'] }}" data-source-logo>
+                        <img class="settings-source-logo" src="/static/img/{{ source['source_type'] }}-logo.png" alt="{{ source['source_name'] }}" data-source-logo>
 
-                        <div class="settings-source-edit">
-                            <div class="form-grid">
-                                <label>
-                                    <span>Source Name</span>
-                                    <input name="source_name" type="text" value="{{ source['source_name'] }}">
-                                </label>
-
-                                <label>
-                                    <span>Source Type</span>
-                                    <select class="settings-select" name="source_type" data-source-type>
-                                        <option value="radarr" {% if source["source_type"] == "radarr" %}selected{% endif %}>Radarr</option>
-                                        <option value="sonarr" {% if source["source_type"] == "sonarr" %}selected{% endif %}>Sonarr</option>
-                                    </select>
-                                </label>
-
-                                <label>
-                                    <span>Server URL</span>
-                                    <input name="source_url" type="text" value="{{ source['source_url'] }}">
-                                </label>
-
-                                <label>
-                                    <span>API Key</span>
-                                    <div class="settings-secret-row">
-                                        <input name="api_key" type="password" value="{{ source['api_key'] }}">
-                                        <button class="mini-action-button" type="button" data-toggle-secret>Show</button>
-                                    </div>
-                                </label>
-                            </div>
-
-                            <div class="settings-description">
-                                {{ source["source_type"]|capitalize }}
-                                {% if source["libraries"] %}
-                                    → {{ source["libraries"]|length }} mapped librar{{ "y" if source["libraries"]|length == 1 else "ies" }}
-                                {% else %}
-                                    → No mapped libraries
-                                {% endif %}
-                            </div>
-
-                            <div class="source-library-results" data-settings-compatible-libraries>
-                                {% if source["libraries"] %}
-                                    <div class="library-results-header">
-                                        <div>
-                                            <h3>Mapped Libraries</h3>
-                                            <p>This source will sync these libraries. Test the source to refresh the full compatible list.</p>
+                        <div class="settings-source-main">
+                            <div class="settings-source-static" data-source-static>
+                                <div class="settings-source-static-top">
+                                    <div>
+                                        <div class="settings-source-name-static" data-source-static-name>{{ source["source_name"] }}</div>
+                                        <div class="settings-source-meta" data-source-static-meta>
+                                            v{{ source["version"] or "Unknown" }}
+                                            {% if source["libraries"] %}
+                                                <span>•</span> {{ source["libraries"]|length }} mapped librar{{ "y" if source["libraries"]|length == 1 else "ies" }}
+                                            {% else %}
+                                                <span>•</span> No mapped libraries
+                                            {% endif %}
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div class="library-grid">
+                                <div class="settings-source-library-strip" data-source-static-libraries>
+                                    {% if source["libraries"] %}
                                         {% for library in source["libraries"] %}
-                                            <label class="source-library-option saved">
-                                                <input
-                                                    type="checkbox"
-                                                    class="source-library-checkbox"
-                                                    value="{{ library['library_id'] }}"
-                                                    data-library-name="{{ library['library_name'] }}"
-                                                    data-library-type="{{ library['library_type'] }}"
-                                                    data-library-image-url="{{ library['library_image_url'] or '' }}"
-                                                    checked
-                                                >
-
+                                            <div class="settings-source-library-chip">
                                                 {% if library["library_image_url"] %}
                                                     <img
                                                         class="library-image"
@@ -559,38 +535,118 @@
                                                         alt="{{ library['library_name'] }}"
                                                         onerror="this.remove(); this.nextElementSibling.style.display='grid';"
                                                     >
-
                                                     <div class="library-icon library-icon-fallback" style="display: none;">
-                                                        {% if library["library_type"] == "movies" %}🎬{% elif library["library_type"] == "tvshows" %}📺{% else %}▣{% endif %}
+                                                        {% if library["library_type"] == "movies" %}🎬{% elif library["library_type"] == "tvshows" %}📺{% elif library["library_type"] == "music" %}🎵{% elif library["library_type"] == "homevideos" %}🎥{% else %}▣{% endif %}
                                                     </div>
                                                 {% else %}
                                                     <div class="library-icon">
-                                                        {% if library["library_type"] == "movies" %}🎬{% elif library["library_type"] == "tvshows" %}📺{% else %}▣{% endif %}
+                                                        {% if library["library_type"] == "movies" %}🎬{% elif library["library_type"] == "tvshows" %}📺{% elif library["library_type"] == "music" %}🎵{% elif library["library_type"] == "homevideos" %}🎥{% else %}▣{% endif %}
                                                     </div>
                                                 {% endif %}
-
-                                                <div>
-                                                    <div class="library-name">
-                                                        {{ library["library_name"] }}
-                                                    </div>
-
-                                                    <div class="library-type">
-                                                        Mapped Library
-                                                    </div>
-                                                </div>
-                                            </label>
+                                                <span>{{ library["library_name"] }}</span>
+                                            </div>
                                         {% endfor %}
-                                    </div>
-                                {% else %}
-                                    <div class="source-placeholder">
-                                        Compatible libraries will appear after a successful connection test.
-                                    </div>
-                                {% endif %}
+                                    {% else %}
+                                        <div class="settings-source-no-libraries">No mapped libraries</div>
+                                    {% endif %}
+                                </div>
                             </div>
 
-                            <div class="settings-source-actions">
+                            <div class="settings-source-edit hidden" data-source-edit>
+                                <div class="settings-source-edit-title">Edit Source</div>
+
+                                <div class="form-grid settings-source-form-grid">
+                                    <label>
+                                        <span>Source Name</span>
+                                        <input name="source_name" type="text" value="{{ source['source_name'] }}" placeholder="Enter source name">
+                                    </label>
+
+                                    <label>
+                                        <span>Source Type</span>
+                                        <select class="settings-select" name="source_type" data-source-type>
+                                            <option value="" disabled>Select source type</option>
+                                            <option value="radarr" {% if source["source_type"] == "radarr" %}selected{% endif %}>Radarr</option>
+                                            <option value="sonarr" {% if source["source_type"] == "sonarr" %}selected{% endif %}>Sonarr</option>
+                                        </select>
+                                    </label>
+
+                                    <label>
+                                        <span>Server URL</span>
+                                        <input name="source_url" type="text" value="{{ source['source_url'] }}" placeholder="Enter server URL">
+                                    </label>
+
+                                    <label>
+                                        <span>API Key</span>
+                                        <div class="settings-secret-row">
+                                            <input name="api_key" type="password" value="{{ source['api_key'] }}" placeholder="Enter API key">
+                                            <button class="mini-action-button" type="button" data-toggle-secret>Show</button>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div class="settings-description" data-source-edit-description>
+                                    Select libraries, then save to update this source and re-register its webhook.
+                                </div>
+
+                                <div class="source-library-results" data-settings-compatible-libraries>
+                                    {% if source["libraries"] %}
+                                        <div class="library-results-header">
+                                            <div>
+                                                <h3>Mapped Libraries</h3>
+                                                <p>Use Refresh Libraries to reload available media-server libraries.</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="library-grid settings-library-grid-compact">
+                                            {% for library in source["libraries"] %}
+                                                <label class="source-library-option saved">
+                                                    <input
+                                                        type="checkbox"
+                                                        class="source-library-checkbox"
+                                                        value="{{ library['library_id'] }}"
+                                                        data-library-name="{{ library['library_name'] }}"
+                                                        data-library-type="{{ library['library_type'] }}"
+                                                        data-library-image-url="{{ library['library_image_url'] or '' }}"
+                                                        checked
+                                                    >
+
+                                                    {% if library["library_image_url"] %}
+                                                        <img
+                                                            class="library-image"
+                                                            src="{{ library['library_image_url'] }}"
+                                                            alt="{{ library['library_name'] }}"
+                                                            onerror="this.remove(); this.nextElementSibling.style.display='grid';"
+                                                        >
+                                                        <div class="library-icon library-icon-fallback" style="display: none;">
+                                                            {% if library["library_type"] == "movies" %}🎬{% elif library["library_type"] == "tvshows" %}📺{% elif library["library_type"] == "music" %}🎵{% elif library["library_type"] == "homevideos" %}🎥{% else %}▣{% endif %}
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="library-icon">
+                                                            {% if library["library_type"] == "movies" %}🎬{% elif library["library_type"] == "tvshows" %}📺{% elif library["library_type"] == "music" %}🎵{% elif library["library_type"] == "homevideos" %}🎥{% else %}▣{% endif %}
+                                                        </div>
+                                                    {% endif %}
+
+                                                    <div>
+                                                        <div class="library-name">{{ library["library_name"] }}</div>
+                                                        <div class="library-type">Mapped Library</div>
+                                                    </div>
+                                                </label>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div class="source-placeholder">
+                                            Use Refresh Libraries to load compatible media-server libraries.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="settings-source-actions settings-source-actions-compact">
                                 <button class="mini-action-button" type="button" data-source-test>Test Connection</button>
-                                <button class="mini-action-button good" type="button" data-source-save>Save Source</button>
+                                <button class="mini-action-button" type="button" data-source-refresh-libraries>Refresh Libraries</button>
+                                <button class="mini-action-button" type="button" data-source-edit-button>Edit</button>
+                                <button class="mini-action-button good hidden" type="button" data-source-save>Save Source</button>
+                                <button class="mini-action-button secondary-action hidden" type="button" data-source-cancel-edit>Cancel</button>
                                 <button class="mini-action-button danger" type="button" data-source-delete>Delete</button>
                             </div>
 
@@ -608,27 +664,18 @@
         {% endif %}
     </section>
 
-    <section class="card settings-card settings-card-wide">
-        <div class="settings-card-header">
-            <div>
-                <h2>Operations</h2>
-                <p class="card-muted">Maintenance actions for testing and setup recovery.</p>
-            </div>
+    <section class="settings-reset-strip settings-card-fullrow">
+        <div class="settings-reset-copy">
+            <h2>Reset Configuration</h2>
+            <p class="card-muted">Reset MediaSync setup and return to first-run configuration.</p>
         </div>
 
-        <div class="settings-operation-row">
-            <button class="primary-button secondary-action" type="button" data-test-all-sources>
-                Test All Sources
-            </button>
-
-            <button class="danger-button" type="button" data-reset-config>
-                Reset Configuration
-            </button>
-        </div>
+        <button class="danger-button settings-reset-button" type="button" data-reset-config>
+            Reset Configuration
+        </button>
 
         <div class="settings-result hidden" data-settings-result></div>
     </section>
-
 </section>
 
 {% endblock %}

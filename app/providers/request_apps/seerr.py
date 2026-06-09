@@ -25,14 +25,14 @@ class SeerrProvider(RequestAppProvider):
   "subject": "{{subject}}",
   "message": "{{message}}",
   "image": "{{image}}",
-  "{{media}}": {
+  "media": {
     "media_type": "{{media_type}}",
     "tmdbId": "{{media_tmdbid}}",
     "tvdbId": "{{media_tvdbid}}",
     "status": "{{media_status}}",
     "status4k": "{{media_status4k}}"
   },
-  "{{request}}": {
+  "request": {
     "request_id": "{{request_id}}",
     "requestedBy_email": "{{requestedBy_email}}",
     "requestedBy_username": "{{requestedBy_username}}",
@@ -40,7 +40,7 @@ class SeerrProvider(RequestAppProvider):
     "requestedBy_settings_discordId": "{{requestedBy_settings_discordId}}",
     "requestedBy_settings_telegramChatId": "{{requestedBy_settings_telegramChatId}}"
   },
-  "{{issue}}": {
+  "issue": {
     "issue_id": "{{issue_id}}",
     "issue_type": "{{issue_type}}",
     "issue_status": "{{issue_status}}",
@@ -50,7 +50,7 @@ class SeerrProvider(RequestAppProvider):
     "reportedBy_settings_discordId": "{{reportedBy_settings_discordId}}",
     "reportedBy_settings_telegramChatId": "{{reportedBy_settings_telegramChatId}}"
   },
-  "{{comment}}": {
+  "comment": {
     "comment_message": "{{comment_message}}",
     "commentedBy_email": "{{commentedBy_email}}",
     "commentedBy_username": "{{commentedBy_username}}",
@@ -58,7 +58,7 @@ class SeerrProvider(RequestAppProvider):
     "commentedBy_settings_discordId": "{{commentedBy_settings_discordId}}",
     "commentedBy_settings_telegramChatId": "{{commentedBy_settings_telegramChatId}}"
   },
-  "{{extra}}": []
+  "extra": []
 }"""
 
     def _headers(self) -> dict[str, str]:
@@ -285,7 +285,7 @@ class SeerrProvider(RequestAppProvider):
         # Proven Seerr rule:
         # POST validation wants jsonPayload as a string, and Seerr UI stays healthy
         # when the stored value is a JSON-escaped string.
-        options["jsonPayload"] = json.dumps(self.DEFAULT_WEBHOOK_JSON_PAYLOAD)
+        options["jsonPayload"] = self.DEFAULT_WEBHOOK_JSON_PAYLOAD
 
         payload["options"] = options
 

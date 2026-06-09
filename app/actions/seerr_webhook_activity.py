@@ -61,17 +61,23 @@ def process_seerr_webhook_event(
 
     lifecycle_id = _get_or_create_lifecycle_from_request_app(request_app, normalized, action)
 
-    add_activity_event(
-        event_type=sentence,
-        status=_event_status(action),
-        source_name=request_app.get("app_name") or "Seerr",
-        source_type=request_app.get("app_type") or "seerr",
-        media_title=sentence,
-        details=normalized.get("quality_profile") or "",
-        lifecycle_id=lifecycle_id,
-        lifecycle_stage=_lifecycle_stage_for_action(action),
-    )
-    update_lifecycle_status(lifecycle_id, action or "requested")
+    if action == "denied":
+        add_activity_event(
+            event_type=sentence,
+            status="error",
+            source_name=request_app.get("app_name") or "Seerr",
+            source_type=request_app.get("app_type") or "seerr",
+            media_title=normalized.get("title") or sentence,
+            details=normalized.get("quality_profile") or "",
+            lifecycle_id=lifecycle_id,
+            lifecycle_stage="Denied",
+        )
+        update_lifecycle_status(lifecycle_id, "denied")
+    else:
+        # Request-app events create the media activity card at request time.
+        # Auto-approved/processing Seerr notifications still represent the initial request
+        # in the user-facing feed; later Arr/downloader/media-server events update the card.
+        update_lifecycle_status(lifecycle_id, "requested")
 
     return {
         "success": True,

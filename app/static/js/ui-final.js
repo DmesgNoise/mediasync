@@ -228,8 +228,11 @@ function initSettingsForms() {
                 `,
                 actionText: "Reset Configuration",
                 onConfirm: async () => {
-                    const card = resetButton.closest(".settings-card");
-                    const result = await postEndpoint("/api/settings/reset", card);
+                    const container =
+                        resetButton.closest(".settings-reset-strip") ||
+                        resetButton.closest(".settings-card") ||
+                        document.body;
+                    const result = await postEndpoint("/api/settings/reset", container);
 
                     if (result && result.success) {
                         window.location.href = "/setup";
@@ -273,64 +276,85 @@ function addSettingsSourceRow() {
 
 function createSettingsSourceRow() {
     const row = document.createElement("div");
-    row.className = "settings-source-item editable";
+    row.className = "settings-source-item settings-source-compact is-editing is-new";
     row.draggable = true;
     row.dataset.sourceRow = "";
     row.dataset.sourceId = "";
     row.dataset.sourceVersion = "";
     row.dataset.connectionValid = "false";
+    row.dataset.editing = "true";
 
     row.innerHTML = `
         <div class="source-order-controls">
-            <div class="drag-handle">↕</div>
+            <div class="drag-handle" title="Drag to reorder">↕</div>
             <button class="mini-action-button source-order-button" type="button" data-source-move-up>Up</button>
             <button class="mini-action-button source-order-button" type="button" data-source-move-down>Down</button>
         </div>
 
-        <img src="/static/img/radarr-logo.png" alt="Radarr" data-source-logo>
+        <img class="settings-source-logo" src="/static/img/default.png" alt="Source" data-source-logo>
 
-        <div class="settings-source-edit">
-            <div class="form-grid">
-                <label>
-                    <span>Source Name</span>
-                    <input name="source_name" type="text" value="Radarr">
-                </label>
-
-                <label>
-                    <span>Source Type</span>
-                    <select class="settings-select" name="source_type" data-source-type>
-                        <option value="radarr" selected>Radarr</option>
-                        <option value="sonarr">Sonarr</option>
-                    </select>
-                </label>
-
-                <label>
-                    <span>Server URL</span>
-                    <input name="source_url" type="text" placeholder="http://radarr:7878">
-                </label>
-
-                <label>
-                    <span>API Key</span>
-                    <div class="settings-secret-row">
-                        <input name="api_key" type="password" placeholder="Enter API key">
-                        <button class="mini-action-button" type="button" data-toggle-secret>Show</button>
+        <div class="settings-source-main">
+            <div class="settings-source-static hidden" data-source-static>
+                <div class="settings-source-static-top">
+                    <div>
+                        <div class="settings-source-name-static" data-source-static-name>New Source</div>
+                        <div class="settings-source-meta" data-source-static-meta>No mapped libraries</div>
                     </div>
-                </label>
-            </div>
-
-            <div class="settings-description">
-                New source → test connection to discover compatible libraries.
-            </div>
-
-            <div class="source-library-results" data-settings-compatible-libraries>
-                <div class="source-placeholder">
-                    Compatible libraries will appear after a successful connection test.
+                </div>
+                <div class="settings-source-library-strip" data-source-static-libraries>
+                    <div class="settings-source-no-libraries">No mapped libraries</div>
                 </div>
             </div>
 
-            <div class="settings-source-actions">
+            <div class="settings-source-edit" data-source-edit>
+                <div class="settings-source-edit-title">Edit Source</div>
+
+                <div class="form-grid settings-source-form-grid">
+                    <label>
+                        <span>Source Name</span>
+                        <input name="source_name" type="text" placeholder="Enter source name">
+                    </label>
+
+                    <label>
+                        <span>Source Type</span>
+                        <select class="settings-select" name="source_type" data-source-type>
+                            <option value="" selected disabled>Select source type</option>
+                            <option value="radarr">Radarr</option>
+                            <option value="sonarr">Sonarr</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        <span>Server URL</span>
+                        <input name="source_url" type="text" placeholder="Enter server URL">
+                    </label>
+
+                    <label>
+                        <span>API Key</span>
+                        <div class="settings-secret-row">
+                            <input name="api_key" type="password" placeholder="Enter API key">
+                            <button class="mini-action-button" type="button" data-toggle-secret>Show</button>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="settings-description" data-source-edit-description>
+                    Select a source type, test the connection, refresh libraries, then save.
+                </div>
+
+                <div class="source-library-results" data-settings-compatible-libraries>
+                    <div class="source-placeholder">
+                        Use Refresh Libraries to load compatible media-server libraries.
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-source-actions settings-source-actions-compact">
                 <button class="mini-action-button" type="button" data-source-test>Test Connection</button>
+                <button class="mini-action-button" type="button" data-source-refresh-libraries>Refresh Libraries</button>
+                <button class="mini-action-button hidden" type="button" data-source-edit-button>Edit</button>
                 <button class="mini-action-button good" type="button" data-source-save disabled>Save Source</button>
+                <button class="mini-action-button secondary-action" type="button" data-source-cancel-edit>Cancel</button>
                 <button class="mini-action-button danger" type="button" data-source-delete>Delete</button>
             </div>
 
@@ -349,9 +373,13 @@ function wireSettingsSourceRow(row) {
     row.dataset.wired = "true";
     row.dataset.connectionValid = row.dataset.connectionValid || "false";
     row.dataset.sourceVersion = row.dataset.sourceVersion || "";
+    row.dataset.editing = row.dataset.editing || (row.dataset.sourceId ? "false" : "true");
 
     const testButton = row.querySelector("[data-source-test]");
+    const refreshButton = row.querySelector("[data-source-refresh-libraries]");
+    const editButton = row.querySelector("[data-source-edit-button]");
     const saveButton = row.querySelector("[data-source-save]");
+    const cancelButton = row.querySelector("[data-source-cancel-edit]");
     const deleteButton = row.querySelector("[data-source-delete]");
     const moveUpButton = row.querySelector("[data-source-move-up]");
     const moveDownButton = row.querySelector("[data-source-move-down]");
@@ -382,11 +410,8 @@ function wireSettingsSourceRow(row) {
 
     if (typeSelect) {
         typeSelect.addEventListener("change", () => {
-            invalidateSettingsSourceConnection(row);
+            invalidateSettingsSourceConnection(row, { clearLibraries: true });
             syncSettingsSourceLogo(row);
-            if (sourceNameInput && !sourceNameInput.value.trim()) {
-                sourceNameInput.value = formatSourceName(typeSelect.value);
-            }
         });
     }
 
@@ -396,7 +421,7 @@ function wireSettingsSourceRow(row) {
         }
 
         input.addEventListener("input", () => {
-            invalidateSettingsSourceConnection(row);
+            invalidateSettingsSourceConnection(row, { clearLibraries: false });
         });
     });
 
@@ -417,6 +442,31 @@ function wireSettingsSourceRow(row) {
     if (testButton) {
         testButton.addEventListener("click", async () => {
             await testSettingsSource(row);
+        });
+    }
+
+    if (refreshButton) {
+        refreshButton.addEventListener("click", async () => {
+            await refreshSettingsSourceLibraries(row);
+        });
+    }
+
+    if (editButton) {
+        editButton.addEventListener("click", () => {
+            setSettingsSourceEditing(row, true);
+        });
+    }
+
+    if (cancelButton) {
+        cancelButton.addEventListener("click", () => {
+            if (row.dataset.sourceId) {
+                restoreSettingsSourceEditSnapshot(row);
+                setSettingsSourceEditing(row, false);
+                return;
+            }
+
+            row.remove();
+            updateSettingsSourceEmptyState();
         });
     }
 
@@ -450,7 +500,7 @@ function wireSettingsSourceRow(row) {
 
     if (deleteButton) {
         deleteButton.addEventListener("click", () => {
-            const sourceName = row.querySelector('input[name="source_name"]')?.value || "this source";
+            const sourceName = getSettingsSourceName(row) || "this source";
 
             showConfirmModal({
                 title: `Delete ${sourceName}?`,
@@ -484,21 +534,24 @@ function wireSettingsSourceRow(row) {
     }
 
     syncSettingsSourceLogo(row);
+    setSettingsSourceEditing(row, row.dataset.editing === "true", { initialize: true });
     updateSettingsSourceSaveState(row);
 }
 
-function invalidateSettingsSourceConnection(row) {
+function invalidateSettingsSourceConnection(row, options = {}) {
+    const clearLibraries = options.clearLibraries !== false;
+
     row.dataset.connectionValid = "false";
     row.dataset.sourceVersion = "";
 
     const libraryContainer = row.querySelector("[data-settings-compatible-libraries]");
     const resultBox = row.querySelector("[data-settings-result]");
 
-    if (libraryContainer) {
+    if (clearLibraries && libraryContainer) {
         libraryContainer.className = "source-library-results";
         libraryContainer.innerHTML = `
             <div class="source-placeholder">
-                Compatible libraries will appear after a successful connection test.
+                Use Refresh Libraries to load compatible media-server libraries.
             </div>
         `;
     }
@@ -523,26 +576,39 @@ function markSettingsSourceUnsaved(row) {
 function syncSettingsSourceLogo(row) {
     const typeSelect = row.querySelector('select[name="source_type"]');
     const logo = row.querySelector("[data-source-logo]");
+    const sourceType = typeSelect ? typeSelect.value : "";
 
-    if (!typeSelect || !logo) {
+    if (!logo) {
         return;
     }
 
-    logo.src = `/static/img/${typeSelect.value}-logo.png`;
-    logo.alt = formatSourceName(typeSelect.value);
+    if (!sourceType) {
+        logo.src = "/static/img/default.png";
+        logo.alt = "Source";
+        return;
+    }
+
+    logo.src = `/static/img/${sourceType}-logo.png`;
+    logo.alt = formatSourceName(sourceType);
 }
 
 async function testSettingsSource(row) {
     const testButton = row.querySelector("[data-source-test]");
-    const sourceType = row.querySelector('select[name="source_type"]')?.value || "radarr";
+    const sourceType = row.querySelector('select[name="source_type"]')?.value || "";
     const sourceUrl = row.querySelector('input[name="source_url"]')?.value.trim() || "";
     const apiKey = row.querySelector('input[name="api_key"]')?.value.trim() || "";
-    const libraryContainer = row.querySelector("[data-settings-compatible-libraries]");
 
     row.dataset.connectionValid = "false";
     row.dataset.sourceVersion = "";
-
     updateSettingsSourceSaveState(row);
+
+    if (!sourceType) {
+        showResult(row, {
+            success: false,
+            message: "Select a source type first.",
+        });
+        return;
+    }
 
     if (!sourceUrl || !apiKey) {
         showResult(row, {
@@ -551,8 +617,6 @@ async function testSettingsSource(row) {
         });
         return;
     }
-
-    const selectedLibraryIds = getSelectedLibraryIds(row);
 
     showResult(row, {
         success: true,
@@ -565,24 +629,12 @@ async function testSettingsSource(row) {
     }
 
     try {
-        const formData = new FormData();
-        formData.append("source_type", sourceType);
-        formData.append("source_url", sourceUrl);
-        formData.append("api_key", apiKey);
-
-        const result = await fetchJson("/api/source/test", formData);
+        const result = await fetchSettingsSourceTest(row);
 
         if (result.success) {
             row.dataset.connectionValid = "true";
             row.dataset.sourceVersion = result.version || "Unknown";
-
-            if (libraryContainer) {
-                renderCompatibleLibraries(
-                    libraryContainer,
-                    result.compatible_libraries || [],
-                    selectedLibraryIds,
-                );
-            }
+            updateSettingsSourceStatic(row);
 
             showResult(row, {
                 success: true,
@@ -601,6 +653,89 @@ async function testSettingsSource(row) {
     }
 }
 
+async function refreshSettingsSourceLibraries(row) {
+    const refreshButton = row.querySelector("[data-source-refresh-libraries]");
+    const sourceType = row.querySelector('select[name="source_type"]')?.value || "";
+    const sourceUrl = row.querySelector('input[name="source_url"]')?.value.trim() || "";
+    const apiKey = row.querySelector('input[name="api_key"]')?.value.trim() || "";
+    const libraryContainer = row.querySelector("[data-settings-compatible-libraries]");
+
+    if (!sourceType) {
+        showResult(row, {
+            success: false,
+            message: "Select a source type first.",
+        });
+        setSettingsSourceEditing(row, true);
+        return;
+    }
+
+    if (!sourceUrl || !apiKey) {
+        showResult(row, {
+            success: false,
+            message: "Enter a server URL and API key first.",
+        });
+        setSettingsSourceEditing(row, true);
+        return;
+    }
+
+    const selectedLibraryIds = getSelectedLibraryIds(row);
+    setSettingsSourceEditing(row, true);
+
+    showResult(row, {
+        success: true,
+        message: "Refreshing libraries...",
+    });
+
+    if (refreshButton) {
+        refreshButton.disabled = true;
+        refreshButton.textContent = "Refreshing...";
+    }
+
+    try {
+        const result = await fetchSettingsSourceTest(row);
+
+        if (result.success) {
+            row.dataset.connectionValid = "true";
+            row.dataset.sourceVersion = result.version || "Unknown";
+
+            if (libraryContainer) {
+                renderCompatibleLibraries(
+                    libraryContainer,
+                    result.compatible_libraries || [],
+                    selectedLibraryIds,
+                );
+            }
+
+            showResult(row, {
+                success: true,
+                message: `${(result.compatible_libraries || []).length} compatible libraries found. Review selections and save this source.`,
+            });
+        } else {
+            showResult(row, result);
+        }
+    } finally {
+        if (refreshButton) {
+            refreshButton.disabled = false;
+            refreshButton.textContent = "Refresh Libraries";
+        }
+
+        updateSettingsSourceSaveState(row);
+    }
+}
+
+async function fetchSettingsSourceTest(row) {
+    const sourceType = row.querySelector('select[name="source_type"]')?.value || "";
+    const sourceUrl = row.querySelector('input[name="source_url"]')?.value.trim() || "";
+    const apiKey = row.querySelector('input[name="api_key"]')?.value.trim() || "";
+
+    const formData = new FormData();
+    formData.append("source_type", sourceType);
+    formData.append("source_url", sourceUrl);
+    formData.append("api_key", apiKey);
+
+    return await fetchJson("/api/source/test", formData);
+}
+
 async function saveSettingsSource(row) {
     if (row.dataset.connectionValid !== "true") {
         showResult(row, {
@@ -612,10 +747,26 @@ async function saveSettingsSource(row) {
 
     const saveButton = row.querySelector("[data-source-save]");
     const sourceName = row.querySelector('input[name="source_name"]')?.value.trim() || "";
-    const sourceType = row.querySelector('select[name="source_type"]')?.value || "radarr";
+    const sourceType = row.querySelector('select[name="source_type"]')?.value || "";
     const sourceUrl = row.querySelector('input[name="source_url"]')?.value.trim() || "";
     const apiKey = row.querySelector('input[name="api_key"]')?.value.trim() || "";
     const libraries = getCheckedLibraries(row);
+
+    if (!sourceName) {
+        showResult(row, {
+            success: false,
+            message: "Enter a source name before saving.",
+        });
+        return;
+    }
+
+    if (!sourceType) {
+        showResult(row, {
+            success: false,
+            message: "Select a source type before saving.",
+        });
+        return;
+    }
 
     if (!libraries.length) {
         showResult(row, {
@@ -632,7 +783,7 @@ async function saveSettingsSource(row) {
 
     const formData = new FormData();
     formData.append("source_id", row.dataset.sourceId || "");
-    formData.append("source_name", sourceName || formatSourceName(sourceType));
+    formData.append("source_name", sourceName);
     formData.append("source_type", sourceType);
     formData.append("source_url", sourceUrl);
     formData.append("api_key", apiKey);
@@ -646,17 +797,15 @@ async function saveSettingsSource(row) {
     if (result.success) {
         row.dataset.sourceId = result.source_id;
         row.dataset.connectionValid = "true";
-
-        const description = row.querySelector(".settings-description");
-        if (description) {
-            description.textContent = `${formatSourceName(sourceType)} → ${libraries.length} mapped ${libraries.length === 1 ? "library" : "libraries"}`;
-        }
+        row.classList.remove("is-new");
 
         if (saveButton) {
             saveButton.textContent = "Saved ✓";
             saveButton.disabled = true;
         }
 
+        updateSettingsSourceStatic(row);
+        setSettingsSourceEditing(row, false);
         await saveSourceOrder();
         updateSettingsSourceEmptyState();
         return;
@@ -667,6 +816,155 @@ async function saveSettingsSource(row) {
     }
 
     updateSettingsSourceSaveState(row);
+}
+
+function setSettingsSourceEditing(row, editing, options = {}) {
+    if (editing && !options.initialize) {
+        storeSettingsSourceEditSnapshot(row);
+    }
+
+    const staticPanel = row.querySelector("[data-source-static]");
+    const editPanel = row.querySelector("[data-source-edit]");
+    const editButton = row.querySelector("[data-source-edit-button]");
+    const saveButton = row.querySelector("[data-source-save]");
+    const cancelButton = row.querySelector("[data-source-cancel-edit]");
+
+    row.dataset.editing = editing ? "true" : "false";
+    row.classList.toggle("is-editing", editing);
+    row.classList.toggle("is-saved", !editing && !!row.dataset.sourceId);
+
+    if (staticPanel) {
+        staticPanel.classList.toggle("hidden", editing);
+    }
+
+    if (editPanel) {
+        editPanel.classList.toggle("hidden", !editing);
+    }
+
+    if (editButton) {
+        editButton.classList.toggle("hidden", editing || !row.dataset.sourceId);
+    }
+
+    if (saveButton) {
+        saveButton.classList.toggle("hidden", !editing);
+    }
+
+    if (cancelButton) {
+        cancelButton.classList.toggle("hidden", !editing);
+    }
+
+    if (!options.initialize) {
+        updateSettingsSourceSaveState(row);
+    }
+}
+
+
+function storeSettingsSourceEditSnapshot(row) {
+    const snapshot = {
+        sourceName: row.querySelector('input[name="source_name"]')?.value || "",
+        sourceType: row.querySelector('select[name="source_type"]')?.value || "",
+        sourceUrl: row.querySelector('input[name="source_url"]')?.value || "",
+        apiKey: row.querySelector('input[name="api_key"]')?.value || "",
+        checkedLibraryIds: getSelectedLibraryIds(row),
+        connectionValid: row.dataset.connectionValid || "false",
+        sourceVersion: row.dataset.sourceVersion || "",
+    };
+
+    row.dataset.sourceSnapshot = JSON.stringify(snapshot);
+}
+
+function restoreSettingsSourceEditSnapshot(row) {
+    if (!row.dataset.sourceSnapshot) {
+        return;
+    }
+
+    let snapshot = {};
+
+    try {
+        snapshot = JSON.parse(row.dataset.sourceSnapshot);
+    } catch (error) {
+        return;
+    }
+
+    const sourceNameInput = row.querySelector('input[name="source_name"]');
+    const typeSelect = row.querySelector('select[name="source_type"]');
+    const urlInput = row.querySelector('input[name="source_url"]');
+    const apiKeyInput = row.querySelector('input[name="api_key"]');
+
+    if (sourceNameInput) {
+        sourceNameInput.value = snapshot.sourceName || "";
+    }
+
+    if (typeSelect) {
+        typeSelect.value = snapshot.sourceType || "";
+    }
+
+    if (urlInput) {
+        urlInput.value = snapshot.sourceUrl || "";
+    }
+
+    if (apiKeyInput) {
+        apiKeyInput.value = snapshot.apiKey || "";
+    }
+
+    row.dataset.connectionValid = snapshot.connectionValid || "false";
+    row.dataset.sourceVersion = snapshot.sourceVersion || "";
+
+    row.querySelectorAll(".source-library-checkbox").forEach((checkbox) => {
+        checkbox.checked = (snapshot.checkedLibraryIds || []).includes(checkbox.value);
+    });
+
+    syncSettingsSourceLogo(row);
+    updateSettingsSourceSaveState(row);
+}
+
+function updateSettingsSourceStatic(row) {
+    const name = getSettingsSourceName(row) || "Unnamed Source";
+    const sourceType = row.querySelector('select[name="source_type"]')?.value || "";
+    const version = row.dataset.sourceVersion || "Unknown";
+    const libraries = getCheckedLibraries(row);
+    const staticName = row.querySelector("[data-source-static-name]");
+    const staticMeta = row.querySelector("[data-source-static-meta]");
+    const staticLibraries = row.querySelector("[data-source-static-libraries]");
+
+    if (staticName) {
+        staticName.textContent = name;
+    }
+
+    if (staticMeta) {
+        staticMeta.innerHTML = `v${escapeHtml(version)} <span>•</span> ${libraries.length} mapped ${libraries.length === 1 ? "library" : "libraries"}`;
+    }
+
+    if (staticLibraries) {
+        renderStaticSourceLibraries(staticLibraries, libraries);
+    }
+
+    syncSettingsSourceLogo(row);
+}
+
+function renderStaticSourceLibraries(container, libraries) {
+    if (!libraries.length) {
+        container.innerHTML = `<div class="settings-source-no-libraries">No mapped libraries</div>`;
+        return;
+    }
+
+    container.innerHTML = libraries.map((library) => `
+        <div class="settings-source-library-chip">
+            ${libraryImageMarkup({
+                id: library.id,
+                name: library.name,
+                type: library.type,
+                image_url: library.image_url,
+            })}
+            <span>${escapeHtml(library.name)}</span>
+        </div>
+    `).join("");
+}
+
+function getSettingsSourceName(row) {
+    return row.querySelector('input[name="source_name"]')?.value.trim() ||
+        row.querySelector("[data-source-static-name]")?.textContent.trim() ||
+        "";
 }
 
 function getSelectedLibraryIds(row) {
@@ -706,8 +1004,8 @@ function renderCompatibleLibraries(container, libraries, selectedLibraryIds = []
                         class="source-library-checkbox"
                         value="${escapeHtml(library.id)}"
                         data-library-name="${escapeHtml(library.name)}"
-                        data-library-type="${escapeHtml(library.type || "unknown")}"
-                        data-library-image-url="${escapeHtml(library.image_url || "")}"
+                        data-library-type="${escapeHtml(library.type || "unknown")}" 
+                        data-library-image-url="${escapeHtml(library.image_url || "")}" 
                         ${checked}
                     >
 
@@ -732,11 +1030,11 @@ function renderCompatibleLibraries(container, libraries, selectedLibraryIds = []
         <div class="library-results-header">
             <div>
                 <h3>Compatible Libraries</h3>
-                <p>Select one or more libraries for this source.</p>
+                <p>Select one or more libraries for this source, then save the source.</p>
             </div>
         </div>
 
-        <div class="library-grid">
+        <div class="library-grid settings-library-grid-compact">
             ${cards}
         </div>
     `;
@@ -749,10 +1047,18 @@ function updateSettingsSourceSaveState(row) {
         return;
     }
 
+    const sourceName = row.querySelector('input[name="source_name"]')?.value.trim() || "";
+    const sourceType = row.querySelector('select[name="source_type"]')?.value || "";
+    const sourceUrl = row.querySelector('input[name="source_url"]')?.value.trim() || "";
+    const apiKey = row.querySelector('input[name="api_key"]')?.value.trim() || "";
     const checkedLibraries = row.querySelectorAll(".source-library-checkbox:checked");
 
     saveButton.disabled =
         row.dataset.connectionValid !== "true" ||
+        !sourceName ||
+        !sourceType ||
+        !sourceUrl ||
+        !apiKey ||
         checkedLibraries.length === 0;
 }
 
@@ -995,16 +1301,26 @@ function initLiveActivityStream() {
             return;
         }
 
+        if (!event.lifecycle_id) {
+            return;
+        }
+
         if (dashboardFeed) {
             removeIdleActivityPlaceholder(dashboardFeed);
-            dashboardFeed.prepend(renderDashboardActivityEvent(event, dashboardFeed.dataset.dashboardFileDetail || "filename"));
-            trimActivityFeed(dashboardFeed, 25);
+            upsertActivityFeedItem(
+                dashboardFeed,
+                renderDashboardActivityEvent(event, dashboardFeed.dataset.dashboardFileDetail || "filename"),
+                25,
+            );
         }
 
         if (activityFeed) {
             removeIdleActivityPlaceholder(activityFeed);
-            activityFeed.prepend(renderActivityPageEvent(event, activityFeed.dataset.activityFileDetail || "filename"));
-            trimActivityFeed(activityFeed, 250);
+            upsertActivityFeedItem(
+                activityFeed,
+                renderActivityPageEvent(event, activityFeed.dataset.activityFileDetail || "filename"),
+                250,
+            );
         }
 
         if (LIFECYCLE_CURRENT_DATA && String(event.lifecycle_id || "") === String(LIFECYCLE_CURRENT_DATA.lifecycle?.id || "")) {
@@ -1369,9 +1685,27 @@ function cssEscape(value) {
     return value.replace(/[^a-zA-Z0-9_-]/g, "\\$&");
 }
 
+function upsertActivityFeedItem(feed, item, limit) {
+    const lifecycleId = item.dataset.lifecycleId || "";
+
+    if (!lifecycleId) {
+        return;
+    }
+
+    const existing = feed.querySelector(`[data-lifecycle-id="${cssEscape(lifecycleId)}"]`);
+
+    if (existing) {
+        existing.replaceWith(item);
+        return;
+    }
+
+    feed.prepend(item);
+    trimActivityFeed(feed, limit);
+}
+
 function renderDashboardActivityEvent(event, fileDetailLevel = "filename") {
     const item = document.createElement("div");
-    item.className = `activity-event ${escapeHtml(event.status || "info")}`;
+    item.className = `dashboard-2-activity-row ${escapeHtml(event.status || "info")}`;
 
     if (event.lifecycle_id) {
         item.classList.add("lifecycle-clickable");
@@ -1379,25 +1713,24 @@ function renderDashboardActivityEvent(event, fileDetailLevel = "filename") {
         item.dataset.lifecycleDisplayTitle = dashboardActivityTitle(event);
         item.setAttribute("role", "button");
         item.setAttribute("tabindex", "0");
-        item.setAttribute("title", "Open lifecycle");
+        item.setAttribute("title", "Open details");
     }
 
     const title = dashboardActivityTitle(event);
     const subtitle = dashboardActivitySubtitle(event);
-    const subtitleHtml = subtitle ? `<div class="activity-event-meta">${escapeHtml(subtitle)}</div>` : "";
+    const subtitleHtml = subtitle ? `<div class="dashboard-2-activity-subtitle">${escapeHtml(subtitle)}</div>` : "";
     const details = dashboardActivityDetails(event, fileDetailLevel);
-    const detailsHtml = details ? `<div class="dashboard-activity-file">${escapeHtml(details)}</div>` : "";
+    const detailsHtml = details ? `<div class="dashboard-2-activity-file">${escapeHtml(details)}</div>` : "";
 
     item.innerHTML = `
-        <div class="activity-event-dot"></div>
-        <div class="activity-event-body">
-            <div class="activity-event-top">
-                <div class="activity-event-title">${escapeHtml(title)}</div>
-                <div class="activity-event-time">${escapeHtml(event.created_at || "Now")}</div>
-            </div>
+        <div class="dashboard-2-activity-dot"></div>
+        <div class="dashboard-2-activity-body">
+            <div class="dashboard-2-activity-title">${escapeHtml(title)}</div>
             ${subtitleHtml}
             ${detailsHtml}
         </div>
+        <div class="dashboard-2-activity-time">${escapeHtml(event.created_at || "Now")}</div>
+        <div class="dashboard-2-chevron">›</div>
     `;
 
     return item;
@@ -1449,7 +1782,15 @@ function dashboardActivityDetails(event, fileDetailLevel = "filename") {
 
 function renderActivityPageEvent(event, fileDetailLevel) {
     const item = document.createElement("article");
-    item.className = `activity-page-event ${escapeHtml(event.status || "info")}`;
+    item.className = `activity-page-event ${escapeHtml(event.status || "info")} lifecycle-clickable`;
+
+    if (event.lifecycle_id) {
+        item.dataset.lifecycleId = event.lifecycle_id;
+        item.dataset.lifecycleDisplayTitle = dashboardActivityTitle(event);
+        item.setAttribute("role", "button");
+        item.setAttribute("tabindex", "0");
+        item.setAttribute("title", "Open details");
+    }
 
     const route = activityRouteText(event);
     const mediaTitle = event.media_title ? `<div class="activity-page-media">${escapeHtml(event.media_title)}</div>` : "";
@@ -1497,7 +1838,7 @@ function activityRouteText(event) {
 }
 
 function removeIdleActivityPlaceholder(feed) {
-    feed.querySelectorAll(".activity-event.idle, .activity-page-empty").forEach((item) => {
+    feed.querySelectorAll(".activity-event.idle, .dashboard-2-activity-row.idle, .activity-page-empty").forEach((item) => {
         item.remove();
     });
 }
@@ -1695,7 +2036,7 @@ function initLifecyclePopup() {
         }
 
         event.preventDefault();
-        const clickedTitle = row.dataset.lifecycleDisplayTitle || row.querySelector(".dashboard-2-activity-title, .activity-event-title")?.textContent?.trim() || "";
+        const clickedTitle = row.dataset.lifecycleDisplayTitle || row.querySelector(".dashboard-2-activity-title, .activity-event-title, .activity-page-media, .activity-page-title")?.textContent?.trim() || "";
         openLifecycleModal(lifecycleId, backdrop, title, body, clickedTitle);
     });
 

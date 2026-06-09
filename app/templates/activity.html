@@ -5,16 +5,16 @@
 <section class="page-header">
     <div>
         <h1>Activity</h1>
-        <p>Review recent import, scan, queue, and sync events.</p>
+        <p>Review media progress from request to availability.</p>
     </div>
 </section>
 
 <section class="card activity-page-card">
     <div class="card-header">
         <div>
-            <h2>Recent Events</h2>
+            <h2>Recent Activity</h2>
             <p class="card-muted">
-                Showing latest events. Filenames or paths appear based on your settings.
+                Click any item for details.
             </p>
         </div>
     </div>
@@ -22,7 +22,7 @@
     {% if events %}
         <div class="activity-page-list" data-activity-page-feed data-activity-file-detail="{{ settings['activity_file_detail'] }}">
             {% for event in events %}
-                <article class="activity-page-event {{ event['status'] }}">
+                <article class="activity-page-event {{ event['status'] }} lifecycle-clickable" data-lifecycle-id="{{ event['lifecycle_id'] }}" data-lifecycle-display-title="{{ event['media_title'] or event['event_type'] }}" role="button" tabindex="0" title="Open details">
                     <div class="activity-event-dot"></div>
 
                     <div class="activity-page-event-body">
@@ -63,7 +63,7 @@
             <div class="activity-empty-state activity-page-empty">
                 <div class="activity-empty-icon">*</div>
                 <h3>No activity yet</h3>
-                <p>Import and library sync events will appear here once the sync engine is enabled.</p>
+                <p>Media progress appears here once requests, downloads, imports, and scans begin.</p>
             </div>
         </div>
     {% endif %}

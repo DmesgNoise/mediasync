@@ -872,9 +872,184 @@ def add_activity_event(event_type, status, source_id=None, source_name=None, sou
     row = c.fetchone()
     event = dict(row) if row else None
 
+    feed_event = _get_activity_feed_event_for_lifecycle(c, lifecycle_id) if lifecycle_id else None
+
     conn.close()
 
-    _broadcast_activity_event(event)
+    if feed_event:
+        _broadcast_activity_event(feed_event)
+
+    return _format_activity_event(event)
+
+
+def _normalize_stage_key(value):
+    normalized = "".join(
+        character.lower() if character.isalnum() else " "
+        for character in str(value or "")
+    )
+    return "_".join(normalized.split())
+
+
+def _source_label(source_type, source_name=None):
+    explicit_name = str(source_name or "").strip()
+
+    if explicit_name:
+        return explicit_name
+
+    normalized_type = str(source_type or "").strip().lower()
+
+    labels = {
+        "radarr": "Radarr",
+        "sonarr": "Sonarr",
+        "seerr": "Seerr",
+        "jellyseerr": "Jellyseerr",
+        "ombi": "Ombi",
+        "sab": "SABnzbd",
+        "sabnzbd": "SABnzbd",
+        "emby": "Emby",
+        "jellyfin": "Jellyfin",
+        "plex": "Plex",
+        "mediasync": "MediaSync",
+    }
+
+    return labels.get(normalized_type, explicit_name or "MediaSync")
+
+
+def _arr_label_from_event_or_lifecycle(event_row, lifecycle_row):
+    event_source_type = str((event_row or {}).get("source_type") or "").strip().lower()
+    lifecycle_media_type = str((lifecycle_row or {}).get("media_type") or "").strip().lower()
+    lifecycle_source_type = str((lifecycle_row or {}).get("source_type") or "").strip().lower()
+
+    if event_source_type in {"radarr", "sonarr"}:
+        return _source_label(event_source_type, (event_row or {}).get("source_name"))
+
+    if lifecycle_source_type in {"radarr", "sonarr"}:
+        return _source_label(lifecycle_source_type, (lifecycle_row or {}).get("source_app"))
+
+    if lifecycle_media_type in {"tv", "show", "series", "tvshows"}:
+        return "Sonarr"
+
+    return "Radarr"
+
+
+def _display_event_type_for_activity(lifecycle_row, event_row, activity_row):
+    if not lifecycle_row:
+        return "Activity"
+
+    stage = str((event_row or {}).get("stage") or "").strip()
+    stage_key = _normalize_stage_key(stage)
+
+    if not stage_key:
+        source_type = str(lifecycle_row.get("source_type") or "").strip().lower()
+
+        if source_type in {"radarr", "sonarr"}:
+            return f"Added to {_source_label(source_type, lifecycle_row.get('source_app'))}"
+
+        return "Requested"
+
+    if stage_key in {"requested", "request", "request_activity", "approved", "processing"}:
+        return "Requested"
+
+    if stage_key in {"grabbed", "added", "added_to_arr", "sent_to_arr"}:
+        return f"Added to {_arr_label_from_event_or_lifecycle(event_row, lifecycle_row)}"
+
+    if stage_key in {"download_started", "downloading"}:
+        return "Download Started"
+
+    if stage_key in {"download_completed", "downloaded"}:
+        return "Download Completed"
+
+    if stage_key in {"download_cancelled", "download_canceled"}:
+        return "Download Cancelled"
+
+    if stage_key == "download_failed":
+        return "Download Failed"
+
+    if stage_key in {"imported", "importing", "arr_import", "radarr_importing", "sonarr_importing"}:
+        return f"{_arr_label_from_event_or_lifecycle(event_row, lifecycle_row)} Importing"
+
+    if stage_key.startswith("library_sync") or stage_key in {"scan", "scanning", "library_scan", "library_scanned"}:
+        return "Scanning"
+
+    if stage_key in {"available", "available_in_emby", "available_in_jellyfin", "available_in_plex"}:
+        source_name = str((event_row or {}).get("source_name") or "").strip()
+        source_type = str((event_row or {}).get("source_type") or "").strip().lower()
+        media_server_name = _source_label(source_type, source_name)
+
+        if media_server_name and media_server_name != "MediaSync":
+            return f"Available in {media_server_name}"
+
+        return "Available"
+
+    return stage
+
+
+def _get_latest_lifecycle_event_with_activity(cursor, lifecycle_id):
+    cursor.execute(
+        """
+        SELECT
+            le.*,
+            sa.id AS activity_id,
+            sa.source_id AS activity_source_id,
+            sa.source_name AS activity_source_name,
+            sa.source_type AS activity_source_type,
+            sa.library_id AS activity_library_id,
+            sa.library_name AS activity_library_name,
+            sa.event_type AS activity_event_type,
+            sa.media_title AS activity_media_title,
+            sa.file_name AS activity_file_name,
+            sa.file_path AS activity_file_path,
+            sa.details AS activity_details
+        FROM lifecycle_events le
+        LEFT JOIN sync_activity sa ON sa.id = le.activity_id
+        WHERE le.lifecycle_id = ?
+        ORDER BY le.id DESC
+        LIMIT 1
+        """,
+        (lifecycle_id,),
+    )
+
+    row = cursor.fetchone()
+    return dict(row) if row else None
+
+
+def _get_activity_feed_event_for_lifecycle(cursor, lifecycle_id):
+    cursor.execute("SELECT * FROM lifecycles WHERE id = ?", (lifecycle_id,))
+    lifecycle_row = cursor.fetchone()
+
+    if not lifecycle_row:
+        return None
+
+    lifecycle = dict(lifecycle_row)
+    latest_event = _get_latest_lifecycle_event_with_activity(cursor, lifecycle_id)
+
+    origin_source_type = str(lifecycle.get("source_type") or "").strip().lower()
+    origin_source_name = _source_label(origin_source_type, lifecycle.get("source_app"))
+
+    activity_source_id = (latest_event or {}).get("activity_source_id")
+    activity_library_id = (latest_event or {}).get("activity_library_id")
+    activity_library_name = (latest_event or {}).get("activity_library_name")
+    file_name = (latest_event or {}).get("activity_file_name")
+    file_path = (latest_event or {}).get("activity_file_path")
+    details = (latest_event or {}).get("activity_details") or (latest_event or {}).get("details") or ""
+
+    event = {
+        "id": (latest_event or {}).get("activity_id") or (latest_event or {}).get("id") or lifecycle.get("id"),
+        "created_at": lifecycle.get("created_at"),
+        "lifecycle_id": lifecycle.get("id"),
+        "source_id": activity_source_id,
+        "source_name": origin_source_name,
+        "source_type": origin_source_type,
+        "library_id": activity_library_id,
+        "library_name": activity_library_name,
+        "event_type": _display_event_type_for_activity(lifecycle, latest_event, None),
+        "status": (latest_event or {}).get("status") or lifecycle.get("status") or "active",
+        "media_title": lifecycle.get("title"),
+        "file_name": file_name,
+        "file_path": file_path,
+        "details": details,
+        "updated_at": (latest_event or {}).get("created_at") or lifecycle.get("updated_at"),
+    }
 
     return _format_activity_event(event)
 
@@ -882,8 +1057,21 @@ def add_activity_event(event_type, status, source_id=None, source_name=None, sou
 def get_activity_events(limit=100):
     conn = get_connection()
     c = conn.cursor()
-    c.execute("SELECT * FROM sync_activity ORDER BY id DESC LIMIT ?", (limit,))
-    rows = [_format_activity_event(dict(row)) for row in c.fetchall()]
+    c.execute(
+        """
+        SELECT id
+        FROM lifecycles
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (limit,),
+    )
+    lifecycle_ids = [row["id"] for row in c.fetchall()]
+    rows = [
+        event
+        for event in (_get_activity_feed_event_for_lifecycle(c, lifecycle_id) for lifecycle_id in lifecycle_ids)
+        if event
+    ]
     conn.close()
     return rows
 
@@ -891,6 +1079,52 @@ def get_activity_events(limit=100):
 
 def normalize_lifecycle_title(title):
     return " ".join(str(title or "").strip().lower().split())
+
+
+def _lifecycle_has_events(cursor, lifecycle_id):
+    cursor.execute(
+        "SELECT COUNT(*) AS count FROM lifecycle_events WHERE lifecycle_id = ?",
+        (lifecycle_id,),
+    )
+    row = cursor.fetchone()
+
+    return bool(row and row["count"])
+
+
+def _initial_lifecycle_stage_for_origin(source_type, source_app=None):
+    normalized_source_type = str(source_type or "").strip().lower()
+
+    if normalized_source_type in {"seerr", "jellyseerr", "ombi"}:
+        return "Requested"
+
+    if normalized_source_type in {"radarr", "sonarr"}:
+        return f"Added to {_source_label(normalized_source_type, source_app)}"
+
+    return None
+
+
+def _add_initial_lifecycle_event_for_origin(cursor, lifecycle_id, lifecycle):
+    if not lifecycle_id or _lifecycle_has_events(cursor, lifecycle_id):
+        return None
+
+    source_type = str((lifecycle or {}).get("source_type") or "").strip().lower()
+    source_app = (lifecycle or {}).get("source_app")
+    stage = _initial_lifecycle_stage_for_origin(source_type, source_app)
+
+    if not stage:
+        return None
+
+    return _add_lifecycle_event_with_cursor(
+        cursor,
+        lifecycle_id=lifecycle_id,
+        stage=stage,
+        status="success",
+        source_name=_source_label(source_type, source_app),
+        source_type=source_type,
+        title=(lifecycle or {}).get("title"),
+        details=(lifecycle or {}).get("quality_profile") or "",
+        activity_id=None,
+    )
 
 
 def get_or_create_lifecycle(
@@ -965,8 +1199,23 @@ def get_or_create_lifecycle(
                 lifecycle_id,
             ),
         )
+        lifecycle_for_initial = dict(row)
+        lifecycle_for_initial.update({
+            "title": lifecycle_for_initial.get("title") or title,
+            "quality_profile": lifecycle_for_initial.get("quality_profile") or quality_profile,
+            "source_app": lifecycle_for_initial.get("source_app") or source_app,
+            "source_type": lifecycle_for_initial.get("source_type") or source_type,
+        })
+        added_initial_event = _add_initial_lifecycle_event_for_origin(c, lifecycle_id, lifecycle_for_initial)
+
         conn.commit()
+
+        feed_event = _get_activity_feed_event_for_lifecycle(c, lifecycle_id) if added_initial_event else None
         conn.close()
+
+        if feed_event:
+            _broadcast_activity_event(feed_event)
+
         return lifecycle_id
 
     c.execute(
@@ -993,8 +1242,26 @@ def get_or_create_lifecycle(
         ),
     )
     lifecycle_id = c.lastrowid
+
+    _add_initial_lifecycle_event_for_origin(
+        c,
+        lifecycle_id,
+        {
+            "title": title,
+            "quality_profile": quality_profile,
+            "source_app": source_app,
+            "source_type": source_type,
+        },
+    )
+
     conn.commit()
+
+    feed_event = _get_activity_feed_event_for_lifecycle(c, lifecycle_id)
     conn.close()
+
+    if feed_event:
+        _broadcast_activity_event(feed_event)
+
     return lifecycle_id
 
 
@@ -1030,7 +1297,13 @@ def add_lifecycle_event(lifecycle_id, stage, status="success", source_name=None,
         activity_id=activity_id,
     )
     conn.commit()
+
+    feed_event = _get_activity_feed_event_for_lifecycle(c, lifecycle_id)
     conn.close()
+
+    if feed_event:
+        _broadcast_activity_event(feed_event)
+
     return event_id
 
 
@@ -1089,7 +1362,10 @@ def get_lifecycle(lifecycle_id):
 
 def clear_activity_events():
     conn = get_connection()
-    conn.execute("DELETE FROM sync_activity")
+    c = conn.cursor()
+    c.execute("DELETE FROM lifecycle_events")
+    c.execute("DELETE FROM lifecycles")
+    c.execute("DELETE FROM sync_activity")
     conn.commit()
     conn.close()
 
@@ -1097,6 +1373,8 @@ def clear_activity_events():
 def reset_configuration():
     conn = get_connection()
     c = conn.cursor()
+    c.execute("DELETE FROM lifecycle_events")
+    c.execute("DELETE FROM lifecycles")
     c.execute("DELETE FROM sync_activity")
     c.execute("DELETE FROM source_library_map")
     c.execute("DELETE FROM sources")
