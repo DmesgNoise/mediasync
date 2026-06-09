@@ -47,7 +47,7 @@ Features include:
 
 ### Movie Progress Tracking
 
-![Movie Progress](app/static/img/screenshots/movie_download.png)
+![Movie Progress](app/static/img/screenshots/movie-progress.png)
 
 Track a movie through the entire media pipeline:
 
@@ -76,7 +76,7 @@ The movie progress window provides:
 
 ### TV Progress Tracking
 
-![TV Progress](app/static/img/screenshots/tv_download.png)
+![TV Progress](app/static/img/screenshots/tv-progress.png)
 
 Track TV episodes through the media pipeline:
 
@@ -147,9 +147,10 @@ Supported services:
 - Plex
 - Seerr
 - Radarr
-- Radarr 4K
 - Sonarr
 - SABnzbd
+
+MediaSync supports multiple instances of supported applications.
 
 ### Library Statistics
 
@@ -195,8 +196,9 @@ MediaSync can be installed directly to mobile devices and used like a native app
 ### Media Automation
 
 - Radarr
-- Radarr 4K
 - Sonarr
+
+Multiple instances of Radarr and Sonarr are supported.
 
 ### Download Clients
 
