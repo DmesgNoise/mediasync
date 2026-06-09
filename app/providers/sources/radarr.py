@@ -61,6 +61,42 @@ class RadarrProvider:
                 "message": f"Radarr connection failed: {error}",
             }
 
+    def get_quality_profile_name(self, profile_id) -> str:
+        try:
+            normalized_profile_id = int(profile_id)
+        except (TypeError, ValueError):
+            return ""
+
+        try:
+            response = requests.get(
+                f"{self.server_url}/api/v3/qualityprofile",
+                headers=self._headers(),
+                timeout=15,
+            )
+
+            if response.status_code == 401:
+                return ""
+
+            response.raise_for_status()
+            profiles = response.json()
+
+            if not isinstance(profiles, list):
+                return ""
+
+            for profile in profiles:
+                try:
+                    current_id = int(profile.get("id"))
+                except (TypeError, ValueError):
+                    continue
+
+                if current_id == normalized_profile_id:
+                    return str(profile.get("name") or "").strip()
+
+        except requests.exceptions.RequestException:
+            return ""
+
+        return ""
+
     def register_mediasync_webhook(self, webhook_url: str) -> dict:
         return self._register_webhook(
             webhook_url=webhook_url,
@@ -78,7 +114,7 @@ class RadarrProvider:
                 "configContract": "WebhookSettings",
                 "infoLink": "https://wiki.servarr.com/radarr/supported#webhook",
                 "tags": [],
-                "onGrab": False,
+                "onGrab": True,
                 "onDownload": True,
                 "onUpgrade": True,
                 "onRename": True,
@@ -187,6 +223,7 @@ class RadarrProvider:
     def parse_webhook_payload(payload: dict) -> dict:
         event_type = str(payload.get("eventType", "")).strip()
         normalized_event = event_type.lower()
+        is_grab = normalized_event == "grab"
 
         movie = payload.get("movie") or {}
         movie_file = payload.get("movieFile") or {}
@@ -223,6 +260,7 @@ class RadarrProvider:
 
         return {
             "should_scan": should_scan,
+            "is_grab": is_grab,
             "event_type": event_type or "unknown",
             "media_title": media_title,
             "file_name": file_name,

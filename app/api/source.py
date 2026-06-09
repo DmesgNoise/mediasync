@@ -3,8 +3,12 @@ import json
 from fastapi import APIRouter, BackgroundTasks, Form, Request
 
 from app.actions.scan_coordinator import request_scan
+from app.actions.downloader_watcher import start_downloader_watcher
 from app.database import (
     add_activity_event,
+    add_lifecycle_event,
+    get_or_create_lifecycle,
+    update_lifecycle_status,
     delete_source,
     get_app_settings,
     get_media_server,
@@ -130,6 +134,40 @@ async def source_webhook(source_id: int, request: Request):
             "message": "Source not found.",
         }
 
+    payload = await _read_json_payload(request)
+    import_event = _parse_import_event(source["source_type"], payload)
+    lifecycle_id = _get_or_create_lifecycle_from_arr_event(source, import_event)
+    import_event["lifecycle_id"] = lifecycle_id
+
+    if import_event.get("is_grab"):
+        add_lifecycle_event(
+            lifecycle_id=lifecycle_id,
+            stage="Grabbed",
+            status="success",
+            source_name=source["source_name"],
+            source_type=source["source_type"],
+            title=import_event.get("media_title") or "Unknown media",
+            details=import_event.get("release_title") or "",
+            activity_id=None,
+        )
+        update_lifecycle_status(lifecycle_id, "grabbed")
+
+        start_downloader_watcher(
+            source=source,
+            import_event=import_event,
+        )
+
+        return {
+            "success": True,
+            "message": "Grab event stored in lifecycle and downloader watcher started.",
+            "scan_requested": False,
+            "download_watcher_started": True,
+            "source_id": source["id"],
+            "source_name": source["source_name"],
+            "source_type": source["source_type"],
+            "media_title": import_event.get("media_title"),
+        }
+
     media_server = get_media_server()
 
     if not media_server or not media_server.get("connected"):
@@ -146,9 +184,6 @@ async def source_webhook(source_id: int, request: Request):
             "success": False,
             "message": "No connected media server is configured.",
         }
-
-    payload = await _read_json_payload(request)
-    import_event = _parse_import_event(source["source_type"], payload)
 
     if not import_event.get("should_scan"):
         return {
@@ -188,7 +223,10 @@ async def source_webhook(source_id: int, request: Request):
         file_name=import_event.get("file_name"),
         file_path=import_event.get("file_path"),
         details=import_event.get("message", "Import event received."),
+        lifecycle_id=lifecycle_id,
+        lifecycle_stage="Imported",
     )
+    update_lifecycle_status(lifecycle_id, "imported")
 
     for library in libraries:
         request_scan(
@@ -208,6 +246,63 @@ async def source_webhook(source_id: int, request: Request):
         "media_title": import_event.get("media_title"),
     }
 
+
+
+def _get_or_create_lifecycle_from_arr_event(source: dict, import_event: dict):
+    raw = import_event.get("raw") or {}
+    normalized_source_type = str(source.get("source_type") or "").strip().lower()
+    media_type = "tv" if normalized_source_type == "sonarr" else "movie"
+
+    movie = raw.get("movie") or {}
+    series = raw.get("series") or {}
+    media = series if media_type == "tv" else movie
+
+    if media_type == "tv":
+        title = (
+            import_event.get("media_title")
+            or import_event.get("series_title")
+            or media.get("title")
+            or "Unknown media"
+        )
+    else:
+        title = (
+            media.get("title")
+            or import_event.get("movie_title")
+            or import_event.get("media_title")
+            or "Unknown media"
+        )
+
+    return get_or_create_lifecycle(
+        media_type=media_type,
+        title=title,
+        tmdb_id=media.get("tmdbId") or raw.get("tmdbId"),
+        tvdb_id=media.get("tvdbId") or raw.get("tvdbId"),
+        imdb_id=media.get("imdbId") or raw.get("imdbId"),
+        created_by=raw.get("grabbedBy") or raw.get("addedBy") or raw.get("userName") or "",
+        source_app=source.get("source_name"),
+        source_type=source.get("source_type"),
+        quality_profile=import_event.get("quality_profile") or "",
+        poster_url=_find_poster_url(media),
+        status="grabbed" if import_event.get("is_grab") else "imported",
+    )
+
+
+def _find_poster_url(media: dict):
+    images = media.get("images") or []
+
+    if isinstance(images, list):
+        for image in images:
+            if not isinstance(image, dict):
+                continue
+
+            if str(image.get("coverType") or "").lower() in ("poster", "cover") and image.get("remoteUrl"):
+                return image.get("remoteUrl")
+
+        for image in images:
+            if isinstance(image, dict) and image.get("remoteUrl"):
+                return image.get("remoteUrl")
+
+    return media.get("remotePoster") or media.get("posterUrl") or ""
 
 def _parse_libraries_json(libraries_json: str) -> list[dict]:
     if not libraries_json:

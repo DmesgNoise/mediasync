@@ -16,7 +16,7 @@
     <link rel="apple-touch-icon" href="/static/img/default.png">
     <link rel="icon" type="image/png" href="/static/img/default.png">
 
-    <link rel="stylesheet" href="/static/css/app.css?v=ui-final11">
+    <link rel="stylesheet" href="/static/css/app.css?v=dashboard2-2">
 </head>
 
 <body class="theme-{{ media_server['server_type'] if media_server else 'default' }}">
@@ -30,13 +30,12 @@
 
             <div>
                 <div class="brand-title">MediaSync</div>
-                <div class="brand-subtitle">Library Automation</div>
+                <div class="brand-subtitle">Media Stack Dashboard</div>
             </div>
         </div>
 
         <nav class="nav">
             <a class="nav-item {% if active_page == 'dashboard' %}active{% endif %}" href="/">Dashboard</a>
-            <a class="nav-item {% if active_page == 'activity' %}active{% endif %}" href="/activity">Activity</a>
             <a class="nav-item {% if active_page == 'settings' %}active{% endif %}" href="/settings">Settings</a>
             <a class="nav-item {% if active_page == 'about' %}active{% endif %}" href="/about">About</a>
         </nav>
@@ -45,7 +44,7 @@
             <a class="sidebar-logout" href="/logout">Logout</a>
             <div class="status-label">Status</div>
             <div class="status-pill good">Running</div>
-            <div class="status-note">MediaSync v1.1</div>
+            <div class="status-note">MediaSync v2.0</div>
         </div>
     </aside>
 
@@ -74,7 +73,8 @@
 </div>
 
 <script src="/static/js/app.js?v=ui-final3"></script>
-<script src="/static/js/ui-final.js?v=ui-final11"></script>
+<script src="/static/js/ui-final.js?v=ui-final12"></script>
+<script src="/static/js/request-apps.js?v=request-apps1"></script>
 <script>
     if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {

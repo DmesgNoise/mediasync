@@ -132,7 +132,7 @@ a {
 }
 
 .sidebar-status {
-    margin-top: auto;
+    margin-top: 28px;
     padding: 16px;
     border: 1px solid var(--border);
     border-radius: 18px;
@@ -3603,4 +3603,1829 @@ select:focus {
     padding: 9px 14px;
     background: rgba(255, 255, 255, 0.03);
     font-weight: 800;
+}
+
+/* ---------- Dashboard 2.0 Locked Layout ---------- */
+
+.dashboard-2-page-header {
+    margin-bottom: 22px;
+}
+
+.dashboard-last-updated {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(95, 120, 140, 0.22);
+    background: rgba(9, 18, 27, 0.52);
+    color: rgba(220, 232, 240, 0.78);
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+
+.dashboard-2-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(430px, 0.92fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.dashboard-2-main,
+.dashboard-2-side {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.dashboard-2-card,
+.dashboard-service-group {
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at 0% 0%, rgba(255,255,255,.035), transparent 36%),
+        rgba(13, 24, 31, 0.88);
+}
+
+.dashboard-2-card-title,
+.dashboard-service-title {
+    color: #f6fafc;
+    font-size: 1rem;
+    font-weight: 900;
+    margin-bottom: 18px;
+}
+
+.dashboard-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.dashboard-stat-tile {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 96px;
+    padding: 18px;
+    border-radius: 16px;
+    border: 1px solid rgba(95,120,140,.24);
+    background: rgba(9,18,27,.50);
+}
+
+.dashboard-stat-icon {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    font-size: 1.3rem;
+    font-weight: 900;
+}
+
+.dashboard-stat-icon.blue { color: #229dff; }
+.dashboard-stat-icon.green { color: #32d17d; }
+.dashboard-stat-icon.orange { color: #ff9e26; }
+.dashboard-stat-icon.purple { color: #a56cff; }
+
+.dashboard-stat-label {
+    color: rgba(220,232,240,.82);
+    font-size: 0.96rem;
+}
+
+.dashboard-stat-value {
+    margin-top: 10px;
+    color: #f6fafc;
+    font-size: 1.55rem;
+    font-weight: 950;
+}
+
+.dashboard-2-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.dashboard-view-all-button {
+    padding: 10px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(95,120,140,.24);
+    background: rgba(9,18,27,.60);
+    color: #f6fafc;
+    font-size: 0.86rem;
+    font-weight: 850;
+}
+
+.dashboard-2-activity-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-2-activity-row {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr) auto 18px;
+    align-items: center;
+    gap: 14px;
+    padding: 17px 8px;
+    border-top: 1px solid rgba(255,255,255,.07);
+}
+
+.dashboard-2-activity-row:first-child {
+    border-top: 0;
+}
+
+.dashboard-2-activity-dot,
+.dashboard-service-live-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #45b8ff;
+    box-shadow: 0 0 16px rgba(69,184,255,.22);
+}
+
+.dashboard-2-activity-row.success .dashboard-2-activity-dot,
+.dashboard-service-live-dot {
+    background: #32d17d;
+    box-shadow: 0 0 16px rgba(50,209,125,.22);
+}
+
+.dashboard-2-activity-row.error .dashboard-2-activity-dot {
+    background: #ff5d5d;
+    box-shadow: 0 0 16px rgba(255,93,93,.22);
+}
+
+.dashboard-2-activity-row.queued .dashboard-2-activity-dot {
+    background: #f2b84b;
+    box-shadow: 0 0 16px rgba(242,184,75,.22);
+}
+
+.dashboard-2-activity-body {
+    min-width: 0;
+}
+
+.dashboard-2-activity-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #f6fafc;
+    font-weight: 950;
+}
+
+.dashboard-2-activity-subtitle,
+.dashboard-2-activity-file {
+    margin-top: 6px;
+    color: rgba(190,207,220,.78);
+    font-size: 0.9rem;
+}
+
+.dashboard-2-activity-file {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.dashboard-2-activity-time {
+    color: rgba(220,232,240,.80);
+    font-size: 0.9rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.dashboard-2-chevron,
+.dashboard-service-chevron {
+    color: rgba(220,232,240,.62);
+    font-size: 1.9rem;
+    line-height: 1;
+}
+
+.dashboard-time-summary {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+}
+
+.dashboard-time-panel {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    min-width: 0;
+}
+
+.dashboard-time-icon {
+    color: rgba(220,232,240,.72);
+    font-size: 2rem;
+}
+
+.dashboard-time-label {
+    color: rgba(190,207,220,.78);
+    font-size: 0.96rem;
+}
+
+.dashboard-time-value {
+    margin-top: 8px;
+    color: #f6fafc;
+    font-size: 1.35rem;
+    font-weight: 950;
+}
+
+.dashboard-time-value.accent {
+    color: #229dff;
+}
+
+.dashboard-time-divider {
+    width: 1px;
+    height: 62px;
+    background: rgba(255,255,255,.08);
+    margin: 0 28px;
+}
+
+.dashboard-service-group {
+    padding: 16px 18px;
+}
+
+.dashboard-service-title {
+    margin-bottom: 10px;
+}
+
+.dashboard-service-row {
+    display: grid;
+    grid-template-columns: 10px 42px minmax(0, 1fr) auto 18px;
+    align-items: center;
+    gap: 14px;
+    min-height: 60px;
+    padding: 11px 0;
+    border-top: 1px solid rgba(255,255,255,.07);
+}
+
+.dashboard-service-row:first-of-type {
+    border-top: 0;
+}
+
+.dashboard-service-logo {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    border-radius: 10px;
+}
+
+.dashboard-service-logo[src$="sab-logo.png"] {
+    object-fit: cover;
+    object-position: left center;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.dashboard-service-info {
+    min-width: 0;
+}
+
+.dashboard-service-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #f6fafc;
+    font-size: 0.95rem;
+    font-weight: 950;
+}
+
+.dashboard-service-version {
+    margin-top: 4px;
+    color: rgba(190,207,220,.76);
+    font-size: 0.82rem;
+    font-weight: 750;
+}
+
+
+.dashboard-downloader-row.downloader-active {
+    margin: 6px -8px 0;
+    padding: 12px 8px;
+    border-radius: 14px;
+    border: 1px solid rgba(48, 209, 125, 0.42);
+    background: linear-gradient(135deg, rgba(28, 185, 98, 0.08), rgba(9, 18, 27, 0.18));
+}
+
+.dashboard-downloader-row.downloader-active:first-of-type {
+    border-top: 1px solid rgba(48, 209, 125, 0.42);
+}
+
+.dashboard-downloader-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    line-height: 1.3;
+}
+
+.dashboard-downloader-meta span + span::before {
+    content: "•";
+    color: rgba(190, 207, 220, 0.55);
+    margin-right: 6px;
+}
+
+.dashboard-downloader-state.active {
+    color: #32d17d;
+}
+
+.dashboard-downloader-state.idle {
+    color: rgba(190, 207, 220, 0.82);
+}
+
+.dashboard-downloader-state.warning {
+    color: #f2b84b;
+}
+
+.dashboard-downloader-speed {
+    color: #1fa7ff;
+}
+
+.dashboard-service-status {
+    font-size: 0.9rem;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.dashboard-service-status.good {
+    color: #32d17d;
+}
+
+.dashboard-service-status.warning {
+    color: #f2b84b;
+}
+
+.dashboard-service-empty {
+    padding: 13px 0 5px;
+    color: rgba(190,207,220,.70);
+    font-size: 0.9rem;
+}
+
+.dashboard-2-library-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.dashboard-2-library-tile {
+    min-width: 0;
+    padding: 12px 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(95,120,140,.22);
+    background: rgba(9,18,27,.46);
+    text-align: center;
+}
+
+.dashboard-2-library-logo {
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 10px;
+    display: block;
+    margin: 0 auto 8px;
+}
+
+.dashboard-2-library-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #f6fafc;
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+
+.dashboard-2-library-state {
+    margin-top: 4px;
+    color: rgba(190,207,220,.62);
+    font-size: 0.76rem;
+    font-weight: 750;
+}
+
+.mini-scan-button {
+    margin-top: 7px;
+}
+
+@media (max-width: 1250px) {
+    .dashboard-2-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-2-side {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 820px) {
+    .dashboard-stat-grid,
+    .dashboard-2-library-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .dashboard-2-activity-row,
+    .dashboard-service-row {
+        grid-template-columns: 10px minmax(0, 1fr);
+    }
+
+    .dashboard-2-activity-time,
+    .dashboard-2-chevron,
+    .dashboard-service-logo,
+    .dashboard-service-status,
+    .dashboard-service-chevron {
+        display: none;
+    }
+
+    .dashboard-time-summary {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+
+    .dashboard-time-divider {
+        display: none;
+    }
+}
+
+
+
+body.modal-open {
+    overflow: hidden;
+}
+
+.lifecycle-clickable {
+    cursor: pointer;
+}
+
+.lifecycle-clickable:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.lifecycle-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(12px);
+}
+
+.lifecycle-modal-backdrop.hidden {
+    display: none;
+}
+
+.lifecycle-modal {
+    width: min(1440px, 96vw);
+    max-height: 94vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(120, 160, 190, 0.22);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at top left, rgba(30, 144, 255, 0.12), transparent 26rem),
+        radial-gradient(circle at bottom right, rgba(50, 209, 125, 0.08), transparent 28rem),
+        #0e1723;
+    box-shadow: 0 28px 90px rgba(0, 0, 0, 0.62);
+}
+
+.lifecycle-modal.maximized {
+    width: 98vw;
+    height: 96vh;
+    max-height: 96vh;
+}
+
+.lifecycle-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lifecycle-modal-header h2 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.45rem;
+    line-height: 1.2;
+}
+
+.lifecycle-title-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 10px;
+    padding: 4px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.78rem;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+.lifecycle-title-badge.inline {
+    margin-left: 0;
+}
+
+.lifecycle-modal-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.lifecycle-modal-icon-button {
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.06);
+    font-size: 1.25rem;
+    cursor: pointer;
+}
+
+.lifecycle-modal-icon-button:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.lifecycle-modal-body {
+    min-height: 560px;
+    overflow: auto;
+    padding: 24px;
+}
+
+.lifecycle-loading,
+.lifecycle-error,
+.lifecycle-empty {
+    padding: 30px;
+    color: rgba(255, 255, 255, 0.72);
+    text-align: center;
+}
+
+.lifecycle-popup-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.lifecycle-popup-top {
+    display: grid;
+    grid-template-columns: 150px minmax(320px, 1fr) 430px;
+    gap: 24px;
+    align-items: stretch;
+}
+
+.lifecycle-hero-poster .lifecycle-poster-frame {
+    width: 150px;
+    min-height: 225px;
+}
+
+.lifecycle-poster-frame {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 800;
+}
+
+.lifecycle-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.lifecycle-hero-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+}
+
+.lifecycle-hero-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.lifecycle-hero-title-row h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.95rem;
+    line-height: 1.1;
+}
+
+.lifecycle-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.lifecycle-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 11px;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.lifecycle-hero-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.lifecycle-hero-meta-item {
+    min-width: 0;
+    padding-left: 14px;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lifecycle-hero-meta-item:first-child {
+    border-left: 0;
+    padding-left: 0;
+}
+
+.lifecycle-hero-meta-item span {
+    display: block;
+    margin-bottom: 4px;
+    color: rgba(255, 255, 255, 0.56);
+    font-size: 0.82rem;
+}
+
+.lifecycle-hero-meta-item strong {
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.96rem;
+}
+
+.lifecycle-popup-main-grid {
+    display: grid;
+    grid-template-columns: 320px minmax(420px, 1fr);
+    gap: 24px;
+    align-items: stretch;
+}
+
+.lifecycle-detail-left,
+.lifecycle-detail-center,
+.lifecycle-detail-right {
+    min-width: 0;
+}
+
+.lifecycle-side-card,
+.lifecycle-detail-center,
+.lifecycle-current-card {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.035);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.lifecycle-detail-left {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.lifecycle-side-card {
+    padding: 18px;
+}
+
+.lifecycle-side-card.wide {
+    padding: 18px;
+}
+
+.lifecycle-detail-center {
+    padding: 18px;
+}
+
+.lifecycle-section-title {
+    margin-bottom: 16px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.9rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.lifecycle-section-title span {
+    color: rgba(255, 255, 255, 0.48);
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.lifecycle-info-row {
+    display: grid;
+    grid-template-columns: minmax(110px, 1fr) minmax(90px, 1fr);
+    gap: 14px;
+    padding: 10px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 0.86rem;
+}
+
+.lifecycle-info-row strong {
+    color: rgba(255, 255, 255, 0.92);
+    text-align: right;
+}
+
+.lifecycle-timeline {
+    display: flex;
+    flex-direction: column;
+}
+
+.lifecycle-timeline-row {
+    display: grid;
+    grid-template-columns: 82px 1fr;
+    gap: 14px;
+    position: relative;
+    min-height: 82px;
+}
+
+.lifecycle-timeline-row:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    top: 45px;
+    bottom: -8px;
+    left: 16px;
+    width: 2px;
+    background: rgba(148, 163, 184, 0.38);
+}
+
+.lifecycle-timeline-rail {
+    display: grid;
+    grid-template-columns: 32px 42px;
+    gap: 8px;
+    align-items: start;
+    position: relative;
+    z-index: 2;
+}
+
+.lifecycle-state-token {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    margin-top: 12px;
+    border: 2px solid rgba(148, 163, 184, 0.72);
+    border-radius: 999px;
+    background: #0f172a;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.84rem;
+    font-weight: 900;
+}
+
+.lifecycle-timeline-row.complete .lifecycle-state-token {
+    border-color: rgba(34, 197, 94, 0.95);
+    background: rgba(34, 197, 94, 0.95);
+    color: #052e16;
+}
+
+.lifecycle-timeline-row.active .lifecycle-state-token {
+    border-color: rgba(59, 130, 246, 1);
+    color: rgba(59, 130, 246, 1);
+    box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.13);
+}
+
+.lifecycle-timeline-row.failed .lifecycle-state-token {
+    border-color: rgba(239, 68, 68, 1);
+    color: rgba(239, 68, 68, 1);
+}
+
+.lifecycle-timeline-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    margin-top: 6px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.07);
+    color: #fff;
+    font-weight: 900;
+}
+
+.lifecycle-timeline-icon img,
+.lifecycle-current-icon img {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+}
+
+.lifecycle-current-icon.large img {
+    width: 36px;
+    height: 36px;
+}
+
+.lifecycle-timeline-content {
+    min-width: 0;
+    padding: 13px 15px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.lifecycle-timeline-row.active .lifecycle-timeline-content {
+    border-color: rgba(59, 130, 246, 0.45);
+    background: rgba(59, 130, 246, 0.09);
+}
+
+.lifecycle-timeline-topline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.lifecycle-timeline-stage {
+    color: #fff;
+    font-weight: 900;
+}
+
+.lifecycle-timeline-time {
+    color: rgba(255, 255, 255, 0.56);
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+.lifecycle-timeline-source,
+.lifecycle-timeline-detail {
+    margin-top: 4px;
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 0.84rem;
+}
+
+.lifecycle-current-card {
+    min-height: 100%;
+    padding: 22px;
+}
+
+.lifecycle-current-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lifecycle-current-main {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+}
+
+.lifecycle-current-icon {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-weight: 900;
+}
+
+.lifecycle-current-icon.large {
+    width: 70px;
+    height: 70px;
+}
+
+.lifecycle-current-title {
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 900;
+}
+
+.lifecycle-current-meta,
+.lifecycle-current-empty {
+    color: rgba(255, 255, 255, 0.66);
+    font-size: 0.92rem;
+}
+
+.lifecycle-current-state {
+    margin-top: 4px;
+    color: #22c55e;
+    font-size: 0.92rem;
+    font-weight: 800;
+}
+
+.lifecycle-current-state.active {
+    color: #1e90ff;
+}
+
+.lifecycle-current-state.error {
+    color: #ef4444;
+}
+
+.lifecycle-progress-ring {
+    --progress-deg: 0deg;
+    width: 112px;
+    height: 112px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: conic-gradient(#1e90ff var(--progress-deg), rgba(255, 255, 255, 0.08) 0deg);
+    box-shadow: 0 0 28px rgba(30, 144, 255, 0.16);
+}
+
+.lifecycle-progress-ring::before {
+    content: "";
+    position: absolute;
+}
+
+.lifecycle-progress-ring-inner {
+    width: 78px;
+    height: 78px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: #0e1723;
+    color: #8fd0ff;
+    font-size: 1.35rem;
+    font-weight: 900;
+}
+
+.lifecycle-current-stat-list {
+    display: flex;
+    flex-direction: column;
+    margin-top: 14px;
+}
+
+.lifecycle-current-stat {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 12px;
+    padding: 13px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.lifecycle-current-stat strong {
+    color: rgba(255, 255, 255, 0.92);
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.lifecycle-current-note {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border: 1px solid rgba(30, 144, 255, 0.35);
+    border-radius: 14px;
+    background: rgba(30, 144, 255, 0.08);
+    color: rgba(255, 255, 255, 0.76);
+    line-height: 1.45;
+}
+
+.lifecycle-tv-overview {
+    width: 100%;
+}
+
+.lifecycle-tv-season-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lifecycle-tv-season {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.lifecycle-tv-season summary {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 18px;
+    align-items: center;
+    padding: 12px 14px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.lifecycle-tv-season summary::-webkit-details-marker {
+    display: none;
+}
+
+.lifecycle-tv-season-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.lifecycle-tv-season-token {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(148, 163, 184, 0.8);
+    border-radius: 999px;
+}
+
+.lifecycle-tv-season-token.available {
+    border-color: rgba(34, 197, 94, 0.95);
+    background: rgba(34, 197, 94, 0.85);
+}
+
+.lifecycle-tv-season-token.in_progress {
+    border-color: rgba(59, 130, 246, 1);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+.lifecycle-tv-season-progress {
+    display: grid;
+    grid-template-columns: 1fr 60px 60px 110px;
+    gap: 12px;
+    align-items: center;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.9rem;
+}
+
+.lifecycle-tv-season-progress em {
+    color: #22c55e;
+    font-style: normal;
+    text-align: right;
+}
+
+.lifecycle-tv-progress-bar {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.09);
+}
+
+.lifecycle-tv-progress-bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #22c55e, #1e90ff);
+}
+
+.lifecycle-tv-episode-table {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lifecycle-tv-episode-row {
+    display: grid;
+    grid-template-columns: 110px minmax(180px, 1fr) 190px;
+    gap: 14px;
+    padding: 9px 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.045);
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.88rem;
+}
+
+.lifecycle-tv-episode-row strong {
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.lifecycle-tv-episode-row em {
+    color: rgba(255, 255, 255, 0.68);
+    font-style: normal;
+    text-align: right;
+}
+
+.lifecycle-tv-episode-row.available em {
+    color: #22c55e;
+}
+
+.lifecycle-tv-episode-row.downloading em {
+    color: #1e90ff;
+}
+
+.lifecycle-tv-footnote {
+    margin-top: 14px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.82rem;
+}
+
+@media (max-width: 1180px) {
+    .lifecycle-popup-top,
+    .lifecycle-popup-main-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .lifecycle-hero-poster .lifecycle-poster-frame {
+        width: 180px;
+    }
+}
+
+@media (max-width: 720px) {
+    .lifecycle-modal-backdrop {
+        padding: 12px;
+    }
+
+    .lifecycle-modal-body {
+        padding: 16px;
+    }
+
+    .lifecycle-hero-meta-grid,
+    .lifecycle-tv-season summary,
+    .lifecycle-tv-season-progress,
+    .lifecycle-tv-episode-row {
+        grid-template-columns: 1fr;
+    }
+
+    .lifecycle-current-header-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .lifecycle-current-stat,
+    .lifecycle-info-row {
+        grid-template-columns: 1fr;
+    }
+
+    .lifecycle-current-stat strong,
+    .lifecycle-info-row strong,
+    .lifecycle-tv-episode-row em {
+        text-align: left;
+    }
+}
+
+
+/* Movie popup tightening: keep current activity as right column, not header box */
+.lifecycle-popup-shell {
+    gap: 16px;
+}
+
+.lifecycle-popup-top-compact {
+    grid-template-columns: 142px minmax(0, 1fr);
+    gap: 18px;
+    align-items: center;
+}
+
+.lifecycle-popup-top-compact .lifecycle-hero-poster .lifecycle-poster-frame {
+    width: 142px;
+    min-height: 213px;
+}
+
+.lifecycle-popup-top-compact .lifecycle-hero-main {
+    justify-content: center;
+    gap: 12px;
+}
+
+.lifecycle-popup-top-compact .lifecycle-hero-title-row h3 {
+    font-size: 1.75rem;
+}
+
+.lifecycle-popup-main-grid-three {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr) 320px;
+    gap: 16px;
+    align-items: stretch;
+}
+
+.lifecycle-popup-tv .lifecycle-detail-center,
+.lifecycle-popup-tv .lifecycle-current-card,
+.lifecycle-popup-tv .lifecycle-side-card {
+    min-width: 0;
+}
+
+.lifecycle-popup-tv .lifecycle-current-card {
+    overflow: hidden;
+}
+
+.lifecycle-popup-movie .lifecycle-side-card {
+    padding: 14px;
+}
+
+.lifecycle-popup-movie .lifecycle-detail-center,
+.lifecycle-popup-movie .lifecycle-current-card {
+    padding: 16px;
+}
+
+.lifecycle-popup-movie .lifecycle-info-row {
+    padding: 8px 0;
+    font-size: 0.82rem;
+}
+
+.lifecycle-popup-movie .lifecycle-section-title {
+    margin-bottom: 12px;
+}
+
+.lifecycle-popup-movie .lifecycle-timeline-row {
+    min-height: 72px;
+    grid-template-columns: 78px 1fr;
+}
+
+.lifecycle-popup-movie .lifecycle-timeline-content {
+    padding: 11px 13px;
+}
+
+.lifecycle-popup-movie .lifecycle-timeline-icon {
+    width: 38px;
+    height: 38px;
+}
+
+.lifecycle-popup-movie .lifecycle-timeline-icon img {
+    width: 28px;
+    height: 28px;
+}
+
+.lifecycle-popup-movie .lifecycle-state-token {
+    width: 28px;
+    height: 28px;
+}
+
+.lifecycle-popup-movie .lifecycle-current-card {
+    min-height: auto;
+}
+
+.lifecycle-popup-movie .lifecycle-current-header-row {
+    align-items: center;
+}
+
+.lifecycle-popup-movie .lifecycle-current-icon {
+    width: 54px;
+    height: 54px;
+}
+
+.lifecycle-popup-movie .lifecycle-current-title {
+    font-size: 1.08rem;
+}
+
+.lifecycle-popup-movie .lifecycle-progress-ring {
+    width: 98px;
+    height: 98px;
+}
+
+.lifecycle-popup-movie .lifecycle-progress-ring-inner {
+    width: 68px;
+    height: 68px;
+    font-size: 1.16rem;
+}
+
+.lifecycle-popup-movie .lifecycle-current-stat {
+    grid-template-columns: 120px 1fr;
+    padding: 10px 0;
+    font-size: 0.86rem;
+}
+
+.lifecycle-popup-movie .lifecycle-current-note {
+    margin-top: 14px;
+    padding: 12px 14px;
+}
+
+@media (max-width: 1280px) {
+    .lifecycle-popup-main-grid-three {
+        grid-template-columns: 250px minmax(380px, 1fr) 310px;
+        gap: 16px;
+    }
+}
+
+@media (max-width: 1180px) {
+    .lifecycle-popup-main-grid-three {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Final stage-based lifecycle timeline polish */
+.lifecycle-timeline-row.future .lifecycle-state-token {
+    border-color: rgba(148, 163, 184, 0.62);
+    background: transparent;
+    color: transparent;
+}
+
+.lifecycle-timeline-row.future .lifecycle-state-token span {
+    display: none;
+}
+
+.lifecycle-timeline-row.future .lifecycle-timeline-content {
+    opacity: 0.68;
+}
+
+.lifecycle-timeline-row.future .lifecycle-timeline-icon {
+    opacity: 0.55;
+}
+
+.lifecycle-timeline-row.cancelled .lifecycle-state-token {
+    border-color: rgba(248, 113, 113, 0.95);
+    background: rgba(127, 29, 29, 0.28);
+    color: rgba(254, 202, 202, 1);
+}
+
+.lifecycle-timeline-row.cancelled .lifecycle-timeline-content {
+    border-color: rgba(248, 113, 113, 0.35);
+    background: rgba(127, 29, 29, 0.12);
+}
+
+.lifecycle-current-state.future {
+    color: rgba(148, 163, 184, 1);
+}
+
+.lifecycle-current-state.cancelled {
+    color: rgba(248, 113, 113, 1);
+}
+
+.lifecycle-current-progress-first {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.lifecycle-current-main.centered {
+    justify-content: center;
+    text-align: center;
+}
+
+.lifecycle-current-header-row.downloading {
+    display: block;
+}
+
+.activity-event.lifecycle-clickable,
+.dashboard-2-activity-row[data-lifecycle-id] {
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.activity-event.lifecycle-clickable:hover,
+.dashboard-2-activity-row[data-lifecycle-id]:hover {
+    background-color: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.16);
+}
+
+.activity-event.lifecycle-clickable:hover {
+    transform: translateY(-1px);
+}
+
+.activity-event.lifecycle-clickable::after {
+    content: "›";
+    align-self: center;
+    color: rgba(220,235,245,0.62);
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+.activity-event.lifecycle-clickable:hover::after {
+    color: rgba(255,255,255,0.95);
+}
+
+.dashboard-2-chevron {
+    opacity: 0.45;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.dashboard-2-activity-row[data-lifecycle-id]:hover .dashboard-2-chevron {
+    opacity: 1;
+    transform: translateX(2px);
+}
+
+
+/* MediaSync 2.0 locked TV lifecycle popup refinements */
+.lifecycle-popup-tv .lifecycle-current-card {
+    align-self: stretch;
+}
+
+.lifecycle-tv-current-stack {
+    display: grid;
+    gap: 12px;
+}
+
+.lifecycle-tv-current-card {
+    border: 1px solid rgba(74, 144, 226, 0.28);
+    border-radius: 12px;
+    padding: 14px;
+    background: rgba(10, 27, 40, 0.72);
+}
+
+.lifecycle-tv-current-card.downloading {
+    border-color: rgba(74, 144, 226, 0.55);
+}
+
+.lifecycle-tv-current-card.import {
+    border-color: rgba(229, 126, 34, 0.55);
+}
+
+.lifecycle-tv-current-card.scan {
+    border-color: rgba(111, 66, 193, 0.55);
+}
+
+.lifecycle-tv-current-card.available {
+    border-color: rgba(72, 187, 120, 0.55);
+}
+
+.lifecycle-tv-current-title-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+}
+
+.lifecycle-tv-current-title-row > div {
+    min-width: 0;
+}
+
+.lifecycle-tv-current-title-row strong,
+.lifecycle-tv-current-title-row span,
+.lifecycle-tv-current-subline {
+    overflow-wrap: anywhere;
+}
+
+
+.lifecycle-tv-current-progress {
+    height: 7px;
+    overflow: hidden;
+    border-radius: 999px;
+    margin-top: 10px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.lifecycle-tv-current-progress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2685ff, #56a8ff);
+}
+
+.lifecycle-tv-current-subline {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.lifecycle-tv-overview-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: baseline;
+    margin-bottom: 12px;
+}
+
+.lifecycle-tv-overview-header span {
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.lifecycle-tv-season-list {
+    display: grid;
+    gap: 8px;
+}
+
+.lifecycle-tv-season-row,
+.lifecycle-tv-season-row-wrap > summary.lifecycle-tv-season-row {
+    display: grid;
+    grid-template-columns: 18px minmax(80px, 0.8fr) auto minmax(180px, 2fr) minmax(120px, auto) minmax(110px, auto);
+    gap: 12px;
+    align-items: center;
+    padding: 11px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.lifecycle-tv-season-row-wrap {
+    border: 0;
+}
+
+.lifecycle-tv-season-row-wrap > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.lifecycle-tv-season-row-wrap > summary::-webkit-details-marker {
+    display: none;
+}
+
+.lifecycle-tv-season-row.complete {
+    cursor: default;
+}
+
+.lifecycle-tv-season-chevron {
+    color: var(--text);
+    font-size: 1.35rem;
+    line-height: 1;
+    transition: transform 160ms ease;
+}
+
+.lifecycle-tv-season-row-wrap[open] .lifecycle-tv-season-chevron {
+    transform: rotate(90deg);
+}
+
+.lifecycle-tv-season-toggle-spacer {
+    width: 18px;
+}
+
+.lifecycle-tv-status-pill {
+    border-radius: 999px;
+    padding: 4px 9px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--muted);
+}
+
+.lifecycle-tv-status-pill.available {
+    color: #7bdc65;
+    background: rgba(83, 185, 70, 0.14);
+    border: 1px solid rgba(83, 185, 70, 0.28);
+}
+
+.lifecycle-tv-status-pill.in_progress {
+    color: #56a8ff;
+    background: rgba(38, 133, 255, 0.14);
+    border: 1px solid rgba(38, 133, 255, 0.28);
+}
+
+.lifecycle-tv-season-progress {
+    min-width: 0;
+}
+
+.lifecycle-tv-progress-bar {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.lifecycle-tv-progress-bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #4cb944, #77d66b);
+}
+
+.lifecycle-tv-season-row.in_progress .lifecycle-tv-progress-bar span {
+    background: linear-gradient(90deg, #2685ff, #56a8ff);
+}
+
+.lifecycle-tv-episode-table {
+    display: grid;
+    gap: 6px;
+    padding: 8px 12px 4px 30px;
+}
+
+.lifecycle-tv-episode-row {
+    display: grid;
+    grid-template-columns: 20px 70px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.lifecycle-tv-episode-row.available {
+    color: var(--text);
+}
+
+.lifecycle-tv-episode-row.downloading {
+    color: #cfe6ff;
+}
+
+.lifecycle-tv-episode-row strong {
+    color: inherit;
+}
+
+.lifecycle-tv-episode-row em {
+    font-style: normal;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.lifecycle-tv-episode-indicator {
+    font-weight: 800;
+    text-align: center;
+}
+
+.lifecycle-tv-episode-row.available .lifecycle-tv-episode-indicator {
+    color: #69c65a;
+}
+
+.lifecycle-tv-episode-row.downloading .lifecycle-tv-episode-indicator {
+    color: #56a8ff;
+}
+
+.lifecycle-tv-footnote {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .lifecycle-tv-season-row,
+    .lifecycle-tv-season-row-wrap > summary.lifecycle-tv-season-row {
+        grid-template-columns: 18px 1fr auto;
+    }
+
+    .lifecycle-tv-season-progress,
+    .lifecycle-tv-season-row > span:nth-last-child(-n+2) {
+        grid-column: 2 / -1;
+    }
+
+    .lifecycle-tv-episode-row {
+        grid-template-columns: 20px 66px 1fr;
+    }
+
+    .lifecycle-tv-episode-row em {
+        grid-column: 3 / -1;
+    }
+}
+
+
+.dashboard-action-items-grid {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.dashboard-action-item-tile.warning {
+    border-color: rgba(255, 158, 38, .35);
+}
+
+.dashboard-stat-logo-wrap {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.08);
+}
+
+.dashboard-stat-logo {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    display: block;
+}
+
+.dashboard-stat-helper {
+    margin-top: 4px;
+    color: rgba(220,232,240,.54);
+    font-size: .78rem;
+    font-weight: 750;
+    letter-spacing: .02em;
+}
+
+/* Action Items: keep 5 configured items on one row at desktop width */
+.dashboard-action-items-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.dashboard-action-item-tile {
+    min-height: 88px;
+    padding: 12px 10px;
+    gap: 10px;
+}
+
+.dashboard-action-item-icon,
+.dashboard-action-item-icon img {
+    width: 34px;
+    height: 34px;
+}
+
+.dashboard-action-item-label {
+    font-size: 0.86rem;
+    line-height: 1.15;
+}
+
+.dashboard-action-item-value {
+    font-size: 1.45rem;
+    margin-top: 6px;
+}
+
+.dashboard-action-item-subtitle {
+    font-size: 0.76rem;
+    margin-top: 4px;
+}
+
+/* TV popup current activity download card: prevent filename/percent overlap */
+.lifecycle-tv-current-title-row {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.lifecycle-tv-current-title-row > div:nth-child(2) {
+    min-width: 0;
+}
+
+.lifecycle-tv-current-title-row .lifecycle-current-meta {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.lifecycle-tv-current-title-row > strong {
+    min-width: 42px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+
+/* Dashboard library counts */
+.dashboard-2-library-tile {
+    min-height: 150px;
+    padding-top: 18px;
+    padding-bottom: 18px;
+}
+
+.dashboard-2-library-count {
+    margin-top: 6px;
+    color: rgba(190, 207, 220, 0.86);
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.dashboard-2-library-state {
+    margin-top: 14px;
+}
+
+
+/* ---------- Dashboard service reachability/status split ---------- */
+
+.dashboard-service-live-dot.error {
+    background: #ff5d5d !important;
+    box-shadow: 0 0 16px rgba(255, 93, 93, 0.28) !important;
+}
+
+.dashboard-service-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    min-height: 28px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(95, 120, 140, 0.28);
+    background: rgba(9, 18, 27, 0.54);
+    line-height: 1;
+}
+
+.dashboard-service-status.good {
+    color: #32d17d;
+    border-color: rgba(50, 209, 125, 0.26);
+    background: rgba(50, 209, 125, 0.10);
+}
+
+.dashboard-service-status.warning {
+    color: #f2b84b;
+    border-color: rgba(242, 184, 75, 0.30);
+    background: rgba(242, 184, 75, 0.12);
+}
+
+.dashboard-service-status.error {
+    color: #ff5d5d;
+    border-color: rgba(255, 93, 93, 0.32);
+    background: rgba(255, 93, 93, 0.12);
+}
+
+/* TV popup: use the same circular download indicator as movie popup */
+.lifecycle-tv-current-download-ring {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.lifecycle-popup-tv .lifecycle-tv-current-card.downloading .lifecycle-progress-ring {
+    width: 98px;
+    height: 98px;
+}
+
+.lifecycle-popup-tv .lifecycle-tv-current-card.downloading .lifecycle-progress-ring-inner {
+    width: 68px;
+    height: 68px;
+    font-size: 1.16rem;
+}
+
+.lifecycle-popup-tv .lifecycle-tv-current-card.downloading .lifecycle-tv-current-title-row {
+    grid-template-columns: 42px minmax(0, 1fr);
+}
+
+/* Mobile fix: allow dashboard action items to wrap instead of overlapping */
+.dashboard-action-items-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.dashboard-action-item-tile {
+    flex: 1 1 145px;
+    min-width: 145px;
+}
+
+@media (max-width: 720px) {
+    .dashboard-action-items-grid {
+        grid-template-columns: none;
+    }
+
+    .dashboard-action-item-tile {
+        flex: 1 1 calc(50% - 10px);
+        min-width: 0;
+    }
+}
+
+@media (max-width: 420px) {
+    .dashboard-action-item-tile {
+        flex-basis: 100%;
+    }
 }

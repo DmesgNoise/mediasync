@@ -286,6 +286,184 @@
     <section class="card settings-card settings-card-wide">
         <div class="settings-card-header">
             <div>
+                <h2>Request Apps</h2>
+                <p class="card-muted">Connect request management applications and enrich MediaSync activity with request, user, and media metadata.</p>
+            </div>
+
+            <button class="primary-button secondary-action" type="button" data-add-request-app>
+                Add Request App
+            </button>
+        </div>
+
+        <div class="settings-source-list" data-request-app-list>
+            {% if request_apps %}
+                {% for request_app in request_apps %}
+                    <div
+                        class="settings-source-item editable"
+                        data-request-app-row
+                        data-request-app-id="{{ request_app['id'] }}"
+                        data-request-app-version="{{ request_app['version'] or 'Unknown' }}"
+                        data-connection-valid="{{ 'true' if request_app['connected'] else 'false' }}"
+                    >
+                        <div class="source-order-controls"></div>
+
+                        <img
+                            src="/static/img/{{ request_app['app_type'] }}-logo.png"
+                            alt="{{ request_app['app_name'] }}"
+                            data-request-app-logo
+                        >
+
+                        <div class="settings-source-edit">
+                            <div class="form-grid">
+                                <label>
+                                    <span>Request App Name</span>
+                                    <input name="app_name" type="text" value="{{ request_app['app_name'] }}">
+                                </label>
+
+                                <label>
+                                    <span>Request App Type</span>
+                                    <select class="settings-select" name="app_type" data-request-app-type>
+                                        <option value="seerr" {% if request_app["app_type"] == "seerr" %}selected{% endif %}>Seerr</option>
+                                    </select>
+                                </label>
+
+                                <label>
+                                    <span>Server URL</span>
+                                    <input name="app_url" type="text" value="{{ request_app['app_url'] }}">
+                                </label>
+
+                                <label>
+                                    <span>API Key</span>
+                                    <div class="settings-secret-row">
+                                        <input name="api_key" type="password" value="{{ request_app['api_key'] }}">
+                                        <button class="mini-action-button" type="button" data-toggle-secret>Show</button>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="settings-description">
+                                {{ request_app["app_type"]|capitalize }}
+                                → v{{ request_app["version"] or "Unknown" }}
+                                {% if request_app["connected"] %}
+                                    → Connected
+                                {% else %}
+                                    → Disconnected
+                                {% endif %}
+                            </div>
+
+                            <div class="settings-source-actions">
+                                <button class="mini-action-button" type="button" data-request-app-test>Test Connection</button>
+                                <button class="mini-action-button good" type="button" data-request-app-save>Save Request App</button>
+                                <button class="mini-action-button danger" type="button" data-request-app-delete>Delete</button>
+                            </div>
+
+                            <div class="settings-result hidden" data-settings-result></div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        {% if not request_apps %}
+            <div class="empty-box" data-request-app-empty>No request apps configured yet. Add Seerr to begin request tracking.</div>
+        {% else %}
+            <div class="empty-box hidden" data-request-app-empty>No request apps configured yet. Add Seerr to begin request tracking.</div>
+        {% endif %}
+    </section>
+
+
+    <section class="card settings-card settings-card-wide">
+        <div class="settings-card-header">
+            <div>
+                <h2>Downloaders</h2>
+                <p class="card-muted">Connect download clients so MediaSync can track active downloads, progress, speed, ETA, and lifecycle handoff to imports.</p>
+            </div>
+
+            <button class="primary-button secondary-action" type="button" data-add-downloader>
+                Add Downloader
+            </button>
+        </div>
+
+        <div class="settings-source-list" data-downloader-list>
+            {% if downloaders %}
+                {% for downloader in downloaders %}
+                    <div
+                        class="settings-source-item editable"
+                        data-downloader-row
+                        data-downloader-id="{{ downloader['id'] }}"
+                        data-downloader-version="{{ downloader['version'] or 'Unknown' }}"
+                        data-connection-valid="{{ 'true' if downloader['connected'] else 'false' }}"
+                    >
+                        <div class="source-order-controls"></div>
+
+                        <img
+                            src="/static/img/{{ downloader['downloader_type'] }}-logo.png"
+                            alt="{{ downloader['downloader_name'] }}"
+                            data-downloader-logo
+                        >
+
+                        <div class="settings-source-edit">
+                            <div class="form-grid">
+                                <label>
+                                    <span>Downloader Name</span>
+                                    <input name="downloader_name" type="text" value="{{ downloader['downloader_name'] }}">
+                                </label>
+
+                                <label>
+                                    <span>Downloader Type</span>
+                                    <select class="settings-select" name="downloader_type" data-downloader-type>
+                                        <option value="sab" {% if downloader["downloader_type"] == "sab" %}selected{% endif %}>SABnzbd</option>
+                                        <option value="sabnzbd" {% if downloader["downloader_type"] == "sabnzbd" %}selected{% endif %}>SABnzbd</option>
+                                    </select>
+                                </label>
+
+                                <label>
+                                    <span>Server URL</span>
+                                    <input name="downloader_url" type="text" value="{{ downloader['downloader_url'] }}">
+                                </label>
+
+                                <label>
+                                    <span>API Key</span>
+                                    <div class="settings-secret-row">
+                                        <input name="api_key" type="password" value="{{ downloader['api_key'] }}">
+                                        <button class="mini-action-button" type="button" data-downloader-toggle-secret>Show</button>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="settings-description">
+                                {{ "SABnzbd" if downloader["downloader_type"] in ["sab", "sabnzbd"] else downloader["downloader_type"]|capitalize }}
+                                → v{{ downloader["version"] or "Unknown" }}
+                                {% if downloader["connected"] %}
+                                    → Connected
+                                {% else %}
+                                    → Disconnected
+                                {% endif %}
+                            </div>
+
+                            <div class="settings-source-actions">
+                                <button class="mini-action-button" type="button" data-downloader-test>Test Connection</button>
+                                <button class="mini-action-button good" type="button" data-downloader-save>Save Downloader</button>
+                                <button class="mini-action-button danger" type="button" data-downloader-delete>Delete</button>
+                            </div>
+
+                            <div class="settings-result hidden" data-settings-result></div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        {% if not downloaders %}
+            <div class="empty-box" data-downloader-empty>No downloaders configured yet. Add a downloader to enable download monitoring.</div>
+        {% else %}
+            <div class="empty-box hidden" data-downloader-empty>No downloaders configured yet. Add a downloader to enable download monitoring.</div>
+        {% endif %}
+    </section>
+
+    <section class="card settings-card settings-card-wide">
+        <div class="settings-card-header">
+            <div>
                 <h2>Configured Sources</h2>
                 <p class="card-muted">Test source connections, refresh compatible libraries, and update source mappings.</p>
             </div>

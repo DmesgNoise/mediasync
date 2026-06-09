@@ -2,303 +2,244 @@
 
 {% block content %}
 
-<section class="page-header dashboard-page-header">
+<section class="page-header dashboard-page-header dashboard-2-page-header">
     <div>
         <h1>Dashboard</h1>
-        <p>
-            Monitor media imports, source mappings, and library synchronization.
-        </p>
+        <p>Monitor media imports, source mappings, and library synchronization.</p>
+    </div>
+
+    <div class="dashboard-last-updated">
+        ↻ Last updated: <span data-dashboard-clock>Now</span>
     </div>
 </section>
 
-<section class="dashboard-status-strip">
+<section class="dashboard-2-layout">
 
-    <div class="dashboard-status-chip good">
-        <span></span>
-        Media Server Connected
-    </div>
+    <main class="dashboard-2-main">
 
-    <div class="dashboard-status-chip">
-        {{ source_count }} Sources
-    </div>
+        <section class="card dashboard-2-card dashboard-system-stats dashboard-action-items-card">
+            <div class="dashboard-2-card-title">Action Items</div>
 
-    <div class="dashboard-status-chip">
-        {{ library_count }} Libraries
-    </div>
-
-    <div class="dashboard-status-chip neutral" data-active-sync-count>
-        0 Active Syncs
-    </div>
-
-</section>
-
-<section class="dashboard-layout-v2">
-
-    <section class="card activity-card dashboard-activity-card">
-
-        <div class="card-header">
-            <div>
-                <h2>Recent Activity</h2>
-                <p class="card-muted">
-                    Latest import, scan, and sync events.
-                </p>
-            </div>
-
-            <div class="activity-feed-badge">
-                Live Log
-            </div>
-        </div>
-
-        {% if recent_events %}
-
-            <div class="activity-feed-v2 dashboard-activity-scroll" data-dashboard-activity-feed data-dashboard-file-detail="{{ settings['activity_file_detail'] }}">
-
-                {% for event in recent_events %}
-
-                    <div class="activity-event {{ event['status'] }}">
-                        <div class="activity-event-dot"></div>
-
-                        <div class="activity-event-body">
-                            <div class="activity-event-top">
-                                <div class="activity-event-title">
-                                    {{ event["event_type"] }}
-                                </div>
-
-                                <div class="activity-event-time">
-                                    {{ event["created_at"] }}
-                                </div>
+            {% if action_items %}
+                <div class="dashboard-stat-grid dashboard-action-items-grid" data-dashboard-action-items>
+                    {% for item in action_items %}
+                        <div class="dashboard-stat-tile dashboard-action-item-tile{% if not item['success'] %} warning{% endif %}" data-action-item-kind="{{ item['kind'] }}" data-action-item-id="{{ item['id'] }}">
+                            <div class="dashboard-stat-icon dashboard-stat-logo-wrap">
+                                <img class="dashboard-stat-logo" src="/static/img/{{ item['logo'] }}" alt="{{ item['name'] }}">
                             </div>
+                            <div>
+                                <div class="dashboard-stat-label">{{ item['label'] }}</div>
+                                <div class="dashboard-stat-value" data-action-item-value>{{ item['value'] }}</div>
+                                <div class="dashboard-stat-helper" data-action-item-helper>{{ item['helper'] }}</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="dashboard-service-empty">Connect request apps, Arr sources, or downloaders to show live action items.</div>
+            {% endif %}
+        </section>
 
-                            <div class="activity-event-meta">
-                                {{ event["source_name"] or "MediaSync" }}
-                                {% if event["library_name"] %}
-                                    -> {{ event["library_name"] }}
+        <section class="card dashboard-2-card dashboard-recent-activity">
+            <div class="dashboard-2-section-header">
+                <div>
+                    <div class="dashboard-2-card-title">Recent Activity</div>
+                    <div class="dashboard-2-card-subtitle">Latest media stack events</div>
+                </div>
+            </div>
+
+            {% if recent_events %}
+                <div class="dashboard-2-activity-list" data-dashboard-activity-feed data-dashboard-file-detail="{{ settings['activity_file_detail'] }}">
+                    {% for event in recent_events %}
+                        <div class="dashboard-2-activity-row {{ event['status'] }}{% if event['lifecycle_id'] %} lifecycle-clickable{% endif %}"{% if event['lifecycle_id'] %} data-lifecycle-id="{{ event['lifecycle_id'] }}" data-lifecycle-display-title="{{ event["media_title"] or event["event_type"] }}" role="button" tabindex="0" title="Open lifecycle"{% endif %}>
+                            <div class="dashboard-2-activity-dot"></div>
+
+                            <div class="dashboard-2-activity-body">
+                                <div class="dashboard-2-activity-title">
+                                    {{ event["media_title"] or event["event_type"] }}
+                                </div>
+
+                                {% if event["source_type"] != "seerr" %}
+                                    <div class="dashboard-2-activity-subtitle">
+                                        {{ event["event_type"] }}
+                                        {% if event["source_name"] %}
+                                            • {{ event["source_name"] }}
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+
+                                {% if event["details"] %}
+                                    <div class="dashboard-2-activity-file">{{ event["details"] }}</div>
+                                {% elif settings["activity_file_detail"] == "path" and event["file_path"] %}
+                                    <div class="dashboard-2-activity-file">{{ event["file_path"] }}</div>
+                                {% elif event["file_name"] %}
+                                    <div class="dashboard-2-activity-file">{{ event["file_name"] }}</div>
+                                {% elif event["file_path"] %}
+                                    <div class="dashboard-2-activity-file">{{ event["file_path"] }}</div>
                                 {% endif %}
                             </div>
 
-                            {% if event["media_title"] %}
-                                <div class="dashboard-activity-extra">
-                                    {{ event["media_title"] }}
-                                </div>
-                            {% endif %}
-
-                            {% if settings["activity_file_detail"] == "path" and event["file_path"] %}
-                                <div class="dashboard-activity-file">
-                                    {{ event["file_path"] }}
-                                </div>
-                            {% elif event["file_name"] %}
-                                <div class="dashboard-activity-file">
-                                    {{ event["file_name"] }}
-                                </div>
-                            {% elif event["file_path"] %}
-                                <div class="dashboard-activity-file">
-                                    {{ event["file_path"] }}
-                                </div>
-                            {% endif %}
-
-                            {% if event["details"] %}
-                                <div class="dashboard-activity-details">
-                                    {{ event["details"] }}
-                                </div>
-                            {% endif %}
+                            <div class="dashboard-2-activity-time">{{ event["created_at"] }}</div>
+                            <div class="dashboard-2-chevron">›</div>
                         </div>
-                    </div>
-
-                {% endfor %}
-
-            </div>
-
-        {% else %}
-
-            <div class="activity-feed-v2" data-dashboard-activity-feed data-dashboard-file-detail="{{ settings['activity_file_detail'] }}">
-
-                <div class="activity-event idle">
-                    <div class="activity-event-dot"></div>
-
-                    <div class="activity-event-body">
-                        <div class="activity-event-top">
-                            <div class="activity-event-title">
-                                Waiting for import events
-                            </div>
-
-                            <div class="activity-event-time">
-                                Idle
-                            </div>
-                        </div>
-
-                        <div class="activity-event-meta">
-                            Radarr and Sonarr activity will display here once sync automation is enabled.
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-        {% endif %}
-
-    </section>
-
-    <aside class="dashboard-side-stack">
-
-        <section class="card dashboard-media-compact">
-
-            <div class="dashboard-card-title">
-                Media Server
-            </div>
-
-            <div class="media-compact-content">
-
-                <a
-                    class="media-compact-logo-link"
-                    href="{{ media_server['server_url'] if media_server else '#' }}"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Open {{ media_server['server_type']|capitalize if media_server else 'Media Server' }}"
-                >
-                    <img
-                        class="media-compact-logo"
-                        src="/static/img/{{ media_server['server_type'] if media_server else 'emby' }}-logo.png"
-                        alt="{{ media_server['server_type']|capitalize if media_server else 'Media Server' }}"
-                    >
-                </a>
-
-                <div class="media-compact-details">
-                    <div class="media-compact-name">
-                        {{ media_server["server_type"]|capitalize if media_server else "Media Server" }}
-                    </div>
-
-                    <div class="media-compact-version">
-                        {{ media_server["version"] if media_server else "Unknown version" }}
-                    </div>
-
-                    <div class="media-compact-status">
-                        <span></span>
-                        Connected
-                    </div>
-                </div>
-
-            </div>
-
-        </section>
-
-        <section class="card dashboard-sync-sources">
-
-            <div class="dashboard-card-title">
-                Sync Sources
-            </div>
-
-            {% if sources %}
-
-                <div
-                    class="dashboard-source-strip"
-                    style="--dashboard-source-count: {{ sources|length }};"
-                >
-
-                    {% for source in sources %}
-
-                        <a
-                            class="dashboard-source-tile"
-                            href="{{ source['source_url'] }}"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Open {{ source['source_name'] }}"
-                        >
-
-                            <img
-                                class="dashboard-source-logo"
-                                src="/static/img/{{ source['source_type'] }}-logo.png"
-                                alt="{{ source['source_name'] }}"
-                            >
-
-                            <div class="dashboard-source-name">
-                                {{ source["source_name"] }}
-                            </div>
-
-                        </a>
-
                     {% endfor %}
-
                 </div>
-
             {% else %}
-
-                <div class="empty-box">
-                    No sync sources configured yet.
+                <div class="dashboard-2-activity-list" data-dashboard-activity-feed data-dashboard-file-detail="{{ settings['activity_file_detail'] }}">
+                    <div class="dashboard-2-activity-row idle">
+                        <div class="dashboard-2-activity-dot"></div>
+                        <div class="dashboard-2-activity-body">
+                            <div class="dashboard-2-activity-title">Waiting for activity</div>
+                            <div class="dashboard-2-activity-subtitle">Request, download, import, and scan events will appear here.</div>
+                        </div>
+                        <div class="dashboard-2-activity-time">Idle</div>
+                        <div class="dashboard-2-chevron">›</div>
+                    </div>
                 </div>
-
             {% endif %}
-
         </section>
 
-        <section class="card dashboard-library-status">
 
-            <div class="dashboard-card-title">
-                Library Status
-            </div>
+    </main>
+
+    <aside class="dashboard-2-side">
+
+        <section class="card dashboard-service-group">
+            <div class="dashboard-service-title">Media Servers</div>
+
+            {% if media_server %}
+                {% set media_server_status = service_statuses.get("media_server", {}) %}
+                <a class="dashboard-service-row" href="{{ media_server['server_url'] }}" target="_blank" rel="noopener noreferrer" title="{{ media_server_status.get('details', '') }}">
+                    <div class="dashboard-service-live-dot {% if not media_server_status.get('reachable', media_server['connected']) %}error{% endif %}"></div>
+                    <img class="dashboard-service-logo" src="/static/img/{{ media_server['server_type'] }}-logo.png" alt="{{ media_server['server_type']|capitalize }}">
+                    <div class="dashboard-service-info">
+                        <div class="dashboard-service-name">{{ media_server["server_type"]|capitalize }}</div>
+                        <div class="dashboard-service-version">{{ media_server["version"] or "Unknown" }}</div>
+                    </div>
+                    <div class="dashboard-service-status {{ media_server_status.get('state', 'good') }}" data-downloader-status title="{{ media_server_status.get('details', '') }}">{{ media_server_status.get('label', '✓ Healthy') }}</div>
+                    <div class="dashboard-service-chevron">›</div>
+                </a>
+            {% else %}
+                <div class="dashboard-service-empty">No media server configured.</div>
+            {% endif %}
+        </section>
+
+        <section class="card dashboard-service-group">
+            <div class="dashboard-service-title">Request Applications</div>
+
+            {% if request_apps %}
+                {% for request_app in request_apps %}
+                    {% set request_stats = request_app_stats.get(request_app["id"], {}) %}
+                    {% set request_status = service_statuses.get("request_apps", {}).get(request_app["id"], {}) %}
+
+                    <a class="dashboard-service-row dashboard-request-service-row" href="{{ request_app['app_url'] }}" target="_blank" rel="noopener noreferrer" title="{{ request_status.get('details', '') }}">
+                        <div class="dashboard-service-live-dot {% if not request_status.get('reachable', request_app['connected']) %}error{% endif %}"></div>
+                        <img class="dashboard-service-logo" src="/static/img/{{ request_app['app_type'] }}-logo.png" alt="{{ request_app['app_name'] }}">
+
+                        <div class="dashboard-service-info">
+                            <div class="dashboard-service-name">{{ request_app["app_name"] }}</div>
+                            <div class="dashboard-service-version">{{ request_app["version"] or "Unknown" }}</div>
+                        </div>
+
+                        <div class="dashboard-service-status {{ request_status.get('state', 'good') }}" data-downloader-status title="{{ request_status.get('details', '') }}">{{ request_status.get('label', '✓ Healthy') }}</div>
+
+                        <div class="dashboard-service-chevron">›</div>
+                    </a>
+                {% endfor %}
+            {% else %}
+                <div class="dashboard-service-empty">No request apps configured.</div>
+            {% endif %}
+        </section>
+
+        <section class="card dashboard-service-group">
+            <div class="dashboard-service-title">Media Automation</div>
 
             {% if sources %}
+                {% for source in sources %}
+                    {% set source_status = service_statuses.get("sources", {}).get(source["id"], {}) %}
+                    <a class="dashboard-service-row" href="{{ source['source_url'] }}" target="_blank" rel="noopener noreferrer" title="{{ source_status.get('details', '') }}">
+                        <div class="dashboard-service-live-dot {% if not source_status.get('reachable', source['connected']) %}error{% endif %}"></div>
+                        <img class="dashboard-service-logo" src="/static/img/{{ source['source_type'] }}-logo.png" alt="{{ source['source_name'] }}">
+                        <div class="dashboard-service-info">
+                            <div class="dashboard-service-name">{{ source["source_name"] }}</div>
+                            <div class="dashboard-service-version">{{ source["version"] or "Unknown" }}</div>
+                        </div>
+                        <div class="dashboard-service-status {{ source_status.get('state', 'good') }}" data-downloader-status title="{{ source_status.get('details', '') }}">{{ source_status.get('label', '✓ Healthy') }}</div>
+                        <div class="dashboard-service-chevron">›</div>
+                    </a>
+                {% endfor %}
+            {% else %}
+                <div class="dashboard-service-empty">No Arr sources configured.</div>
+            {% endif %}
+        </section>
 
-                <div
-                    class="dashboard-library-strip"
-                    style="--dashboard-source-count: {{ sources|length }};"
-                >
+        <section class="card dashboard-service-group">
+            <div class="dashboard-service-title">Downloaders</div>
 
+            {% if downloaders %}
+                {% for downloader in downloaders %}
+                    {% set downloader_type = downloader["downloader_type"]|lower %}
+                    {% set logo_file = "sab-logo.png" if downloader_type == "sabnzbd" else downloader_type ~ "-logo.png" %}
+                    {% set stats = downloader_stats.get(downloader["id"], {}) %}
+                    {% set downloader_status = service_statuses.get("downloaders", {}).get(downloader["id"], {}) %}
+                    {% set queue = stats.get("queue", {}) %}
+                    {% set active_count = queue.get("active_count", 0) %}
+
+                    <a class="dashboard-service-row dashboard-downloader-row {% if active_count|int > 0 %}downloader-active{% endif %}" href="{{ downloader['downloader_url'] }}" target="_blank" rel="noopener noreferrer" data-downloader-row data-downloader-id="{{ downloader['id'] }}" title="{{ downloader_status.get('details', '') }}">
+                        <div class="dashboard-service-live-dot {% if not downloader_status.get('reachable', downloader['connected']) %}error{% endif %}" data-downloader-dot></div>
+                        <img class="dashboard-service-logo" src="/static/img/{{ logo_file }}" alt="{{ downloader['downloader_name'] }}">
+
+                        <div class="dashboard-service-info">
+                            <div class="dashboard-service-name">{{ downloader["downloader_name"] }}</div>
+
+                            <div class="dashboard-service-version dashboard-downloader-meta" data-downloader-meta>
+                                <span>{{ downloader["version"] or "Unknown" }}</span>
+
+                                {% if not downloader["connected"] %}
+                                    <span class="dashboard-downloader-state warning">Disconnected</span>
+                                {% elif active_count|int > 0 %}
+                                    <span class="dashboard-downloader-state active">Downloading ({{ active_count }})</span>
+
+                                    {% if queue.get("speed") and queue.get("speed") != "0 B/s" %}
+                                        <span class="dashboard-downloader-speed">{{ queue.get("speed") }}</span>
+                                    {% endif %}
+
+                                    {% if queue.get("timeleft") and queue.get("timeleft") != "0:00:00" %}
+                                        <span>{{ queue.get("timeleft") }} remaining</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="dashboard-downloader-state idle">Idle</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="dashboard-service-status {{ downloader_status.get('state', 'good') }}" data-downloader-status title="{{ downloader_status.get('details', '') }}">{{ downloader_status.get('label', '✓ Healthy') }}</div>
+
+                        <div class="dashboard-service-chevron">›</div>
+                    </a>
+                {% endfor %}
+            {% else %}
+                <div class="dashboard-service-empty">No downloaders configured yet.<br>Add a downloader to enable download monitoring.</div>
+            {% endif %}
+        </section>
+
+        <section class="card dashboard-service-group dashboard-library-group">
+            <div class="dashboard-service-title">Libraries</div>
+
+            {% if sources %}
+                <div class="dashboard-2-library-grid">
                     {% for source in sources %}
+                        {% for library in source["libraries"] %}
+                            <div class="dashboard-2-library-tile" data-dashboard-library-count-tile data-library-id="{{ library['library_id'] }}">
+                                {% if library["library_image_url"] %}
+                                    <img class="dashboard-2-library-logo" src="{{ library['library_image_url'] }}" alt="{{ library['library_name'] }}">
+                                {% else %}
+                                    <img class="dashboard-2-library-logo" src="/static/img/{{ source['source_type'] }}-logo.png" alt="{{ library['library_name'] }}">
+                                {% endif %}
 
-                        {% set library = source["libraries"][0] if source["libraries"] else none %}
-
-                        <div
-                            class="dashboard-library-tile"
-                            data-library-tile
-                            data-source-id="{{ source['id'] }}"
-                        >
-
-                            {% if library %}
-
-                                <div
-                                    class="library-sync-orb idle"
-                                    data-library-orb
-                                    data-progress="0"
-                                >
-
-                                    <img
-                                        class="dashboard-library-logo"
-                                        src="{{ library['library_image_url'] if library['library_image_url'] else ('/static/img/sonarr-logo.png' if library['library_type'] == 'tvshows' else '/static/img/radarr-logo.png') }}"
-                                        alt="{{ library['library_name'] }}"
-                                    >
-
-                                    <svg
-                                        class="library-progress-ring"
-                                        viewBox="0 0 120 120"
-                                        aria-hidden="true"
-                                    >
-                                        <circle
-                                            class="library-progress-value"
-                                            cx="60"
-                                            cy="60"
-                                            r="52"
-                                        ></circle>
-                                    </svg>
-
-                                </div>
-
-                                <div
-                                    class="library-progress-percent hidden"
-                                    data-library-percent
-                                >
-                                    0%
-                                </div>
-
-                                <div class="dashboard-library-name">
-                                    {{ library["library_name"] }}
-                                </div>
-
-                                <div
-                                    class="dashboard-library-state"
-                                    data-library-state
-                                >
-                                    Idle
-                                </div>
+                                <div class="dashboard-2-library-name">{{ library["library_name"] }}</div>
+                                <div class="dashboard-2-library-count" data-library-count>Loading count…</div>
+                                <div class="dashboard-2-library-state">Idle</div>
 
                                 <button
                                     class="mini-scan-button"
@@ -310,133 +251,37 @@
                                 >
                                     Scan
                                 </button>
-
-                            {% else %}
-
-                                <div class="library-sync-orb idle">
-                                    <img
-                                        class="dashboard-library-logo"
-                                        src="/static/img/default.png"
-                                        alt="No library"
-                                    >
-                                </div>
-
-                                <div class="dashboard-library-name">
-                                    No library
-                                </div>
-
-                                <div class="dashboard-library-state">
-                                    Not mapped
-                                </div>
-
-                            {% endif %}
-
-                        </div>
-
+                            </div>
+                        {% endfor %}
                     {% endfor %}
-
                 </div>
-
             {% else %}
-
-                <div class="empty-box">
-                    Library mappings will appear after setup.
-                </div>
-
+                <div class="dashboard-service-empty">Library mappings will appear after setup.</div>
             {% endif %}
-
         </section>
 
     </aside>
 
 </section>
 
-<script>
-    function setLibrarySyncProgress(tile, percent, stateLabel = "Syncing") {
-        const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
 
-        const orb = tile.querySelector("[data-library-orb]");
-        const ring = tile.querySelector(".library-progress-value");
-        const percentLabel = tile.querySelector("[data-library-percent]");
-        const stateLabelElement = tile.querySelector("[data-library-state]");
 
-        if (!orb || !ring || !percentLabel || !stateLabelElement) {
-            return;
-        }
+<div class="lifecycle-modal-backdrop hidden" data-lifecycle-modal-backdrop>
+    <div class="lifecycle-modal" data-lifecycle-modal role="dialog" aria-modal="true" aria-labelledby="lifecycle-modal-title">
+        <div class="lifecycle-modal-header">
+            <div>
+                <h2 id="lifecycle-modal-title" data-lifecycle-modal-title>Loading…</h2>
+            </div>
+            <div class="lifecycle-modal-actions">
+                <button class="lifecycle-modal-icon-button" type="button" data-lifecycle-maximize title="Maximize">□</button>
+                <button class="lifecycle-modal-icon-button" type="button" data-lifecycle-close title="Close">×</button>
+            </div>
+        </div>
 
-        const radius = 52;
-        const circumference = 2 * Math.PI * radius;
-        const dashOffset = circumference - ((safePercent / 100) * circumference);
-
-        ring.style.strokeDasharray = circumference;
-        ring.style.strokeDashoffset = dashOffset;
-
-        if (safePercent >= 100) {
-            orb.classList.remove("syncing");
-            orb.classList.add("complete");
-
-            percentLabel.classList.add("hidden");
-            percentLabel.textContent = "";
-
-            stateLabelElement.textContent = "Complete";
-
-            window.setTimeout(() => {
-                orb.classList.remove("complete");
-                stateLabelElement.textContent = "Idle";
-            }, 1600);
-
-            return;
-        }
-
-        if (safePercent <= 0) {
-            orb.classList.remove("syncing", "complete");
-
-            percentLabel.classList.add("hidden");
-            percentLabel.textContent = "";
-
-            stateLabelElement.textContent = "Idle";
-
-            return;
-        }
-
-        orb.classList.add("syncing");
-        orb.classList.remove("complete");
-
-        percentLabel.classList.remove("hidden");
-        percentLabel.textContent = `${Math.round(safePercent)}%`;
-
-        stateLabelElement.textContent = stateLabel;
-    }
-
-    function demoLibrarySyncAnimation() {
-        const params = new URLSearchParams(window.location.search);
-
-        if (!params.has("demoSync")) {
-            return;
-        }
-
-        const firstTile = document.querySelector("[data-library-tile]");
-
-        if (!firstTile) {
-            return;
-        }
-
-        let progress = 0;
-
-        setLibrarySyncProgress(firstTile, progress, "Syncing");
-
-        const timer = window.setInterval(() => {
-            progress += 4;
-
-            setLibrarySyncProgress(firstTile, progress, "Syncing");
-
-            if (progress >= 100) {
-                window.clearInterval(timer);
-            }
-        }, 260);
-    }
-
-    document.addEventListener("DOMContentLoaded", demoLibrarySyncAnimation);
-</script>
+        <div class="lifecycle-modal-body" data-lifecycle-modal-body>
+            <div class="lifecycle-loading">Loading lifecycle…</div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}

@@ -5,6 +5,10 @@ document.addEventListener("DOMContentLoaded", () => {
     initSourceManagement();
     initDashboardManualScans();
     initLiveActivityStream();
+    initDownloaderCardPolling();
+    initLifecyclePopup();
+    initDashboardLibraryCounts();
+    wireTvSeasonOpenTracking();
 });
 
 const ACTIVE_MANUAL_SCANS = new Set();
@@ -975,33 +979,10 @@ function initLiveActivityStream() {
         return;
     }
 
-    const stream = new EventSource("/api/activity/stream");
-    let activityStreamReloaded = false;
+    let stream = null;
+    let reconnectTimer = null;
 
-    const reloadActivityViewOnce = () => {
-        if (activityStreamReloaded) {
-            return;
-        }
-
-        activityStreamReloaded = true;
-        window.location.reload();
-    };
-
-    document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible" && stream.readyState === EventSource.CLOSED) {
-            reloadActivityViewOnce();
-        }
-    });
-
-    stream.onerror = () => {
-        window.setTimeout(() => {
-            if (stream.readyState === EventSource.CLOSED) {
-                reloadActivityViewOnce();
-            }
-        }, 1500);
-    };
-
-    stream.onmessage = (message) => {
+    const handleActivityMessage = (message) => {
         if (!message.data) {
             return;
         }
@@ -1025,44 +1006,445 @@ function initLiveActivityStream() {
             activityFeed.prepend(renderActivityPageEvent(event, activityFeed.dataset.activityFileDetail || "filename"));
             trimActivityFeed(activityFeed, 250);
         }
+
+        if (LIFECYCLE_CURRENT_DATA && String(event.lifecycle_id || "") === String(LIFECYCLE_CURRENT_DATA.lifecycle?.id || "")) {
+            refreshOpenLifecyclePopup();
+        }
+
+        if (dashboardFeed) {
+            refreshDashboardActionItems();
+
+            if (event.library_id) {
+                refreshDashboardLibraryCount(event.library_id);
+            } else if (isLibraryCountRelatedActivity(event)) {
+                refreshDashboardLibraryCounts();
+            }
+        }
+
+        if (isDownloaderRelatedActivity(event)) {
+            startDownloaderCardPolling();
+            refreshDownloaderCards();
+        }
     };
+
+    const scheduleReconnect = () => {
+        if (reconnectTimer) {
+            return;
+        }
+
+        reconnectTimer = window.setTimeout(() => {
+            reconnectTimer = null;
+
+            if (stream && stream.readyState !== EventSource.CLOSED) {
+                return;
+            }
+
+            if (stream) {
+                try {
+                    stream.close();
+                } catch (error) {
+                    // Ignore cleanup errors.
+                }
+            }
+
+            stream = null;
+            connect();
+        }, 5000);
+    };
+
+    function connect() {
+        if (stream && stream.readyState !== EventSource.CLOSED) {
+            return;
+        }
+
+        stream = new EventSource("/api/activity/stream");
+
+        stream.onopen = () => {
+            if (reconnectTimer) {
+                window.clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+        };
+
+        stream.onerror = () => {
+            scheduleReconnect();
+        };
+
+        stream.onmessage = handleActivityMessage;
+    }
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && (!stream || stream.readyState === EventSource.CLOSED)) {
+            connect();
+        }
+    });
+
+    connect();
+}
+
+
+let DASHBOARD_ACTION_ITEMS_REFRESHING = false;
+let DASHBOARD_ACTION_ITEMS_REFRESH_QUEUED = false;
+
+async function refreshDashboardActionItems() {
+    const grid = document.querySelector("[data-dashboard-action-items]");
+
+    if (!grid) {
+        return;
+    }
+
+    if (DASHBOARD_ACTION_ITEMS_REFRESHING) {
+        DASHBOARD_ACTION_ITEMS_REFRESH_QUEUED = true;
+        return;
+    }
+
+    DASHBOARD_ACTION_ITEMS_REFRESHING = true;
+
+    try {
+        const response = await fetch("/api/dashboard/action-items", {
+            headers: {
+                "Accept": "application/json",
+            },
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success || !Array.isArray(data.items)) {
+            return;
+        }
+
+        data.items.forEach((item) => {
+            const tile = document.querySelector(`[data-action-item-kind="${cssEscape(String(item.kind || ""))}"][data-action-item-id="${cssEscape(String(item.id || ""))}"]`);
+
+            if (!tile) {
+                return;
+            }
+
+            const value = tile.querySelector("[data-action-item-value]");
+            const helper = tile.querySelector("[data-action-item-helper]");
+
+            if (value) {
+                value.textContent = String(item.value ?? 0);
+            }
+
+            if (helper) {
+                helper.textContent = item.helper || "";
+            }
+
+            tile.classList.toggle("warning", item.success === false);
+        });
+
+        const clock = document.querySelector("[data-dashboard-clock]");
+
+        if (clock) {
+            clock.textContent = "Now";
+        }
+    } catch (error) {
+        // Keep current values if a refresh fails.
+    } finally {
+        DASHBOARD_ACTION_ITEMS_REFRESHING = false;
+
+        if (DASHBOARD_ACTION_ITEMS_REFRESH_QUEUED) {
+            DASHBOARD_ACTION_ITEMS_REFRESH_QUEUED = false;
+            refreshDashboardActionItems();
+        }
+    }
+}
+
+
+
+
+function initDashboardLibraryCounts() {
+    refreshDashboardLibraryCounts();
+}
+
+function refreshDashboardLibraryCounts() {
+    document.querySelectorAll("[data-dashboard-library-count-tile][data-library-id]").forEach((tile) => {
+        refreshDashboardLibraryCount(tile.dataset.libraryId);
+    });
+}
+
+async function refreshDashboardLibraryCount(libraryId) {
+    if (!libraryId) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/dashboard/library-count/${encodeURIComponent(libraryId)}`, {
+            headers: { "Accept": "application/json" },
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            return;
+        }
+
+        document.querySelectorAll(`[data-dashboard-library-count-tile][data-library-id="${cssEscape(String(libraryId))}"]`).forEach((tile) => {
+            const countEl = tile.querySelector("[data-library-count]");
+
+            if (countEl) {
+                countEl.textContent = data.label || data.item_count_label || "—";
+            }
+        });
+    } catch (error) {
+        // Keep current count if refresh fails.
+    }
+}
+
+function isLibraryCountRelatedActivity(event) {
+    const text = `${event.event_type || ""} ${event.stage || ""} ${event.details || ""}`.toLowerCase();
+    return text.includes("library scan completed") || text.includes("available in") || text.includes("media server availability confirmed");
+}
+
+
+let DOWNLOADER_CARD_POLL_TIMER = null;
+
+function initDownloaderCardPolling() {
+    if (!document.querySelector("[data-downloader-row]")) {
+        return;
+    }
+
+    if (document.querySelector(".dashboard-downloader-row.downloader-active")) {
+        startDownloaderCardPolling();
+    }
+}
+
+function isDownloaderRelatedActivity(event) {
+    const text = `${event.event_type || ""} ${event.media_title || ""} ${event.source_type || ""}`.toLowerCase();
+
+    return text.includes("grabbed") || text.includes("download started") || text.includes("download completed") || text.includes("download failed") || text.includes("downloader");
+}
+
+function startDownloaderCardPolling() {
+    if (DOWNLOADER_CARD_POLL_TIMER) {
+        return;
+    }
+
+    refreshDownloaderCards();
+    DOWNLOADER_CARD_POLL_TIMER = window.setInterval(refreshDownloaderCards, 1000);
+}
+
+function stopDownloaderCardPolling() {
+    if (!DOWNLOADER_CARD_POLL_TIMER) {
+        return;
+    }
+
+    window.clearInterval(DOWNLOADER_CARD_POLL_TIMER);
+    DOWNLOADER_CARD_POLL_TIMER = null;
+}
+
+async function refreshDownloaderCards() {
+    const rows = document.querySelectorAll("[data-downloader-row]");
+
+    if (!rows.length) {
+        stopDownloaderCardPolling();
+        return;
+    }
+
+    let result;
+
+    try {
+        const response = await fetch("/api/downloaders/queue/all", {
+            headers: {
+                "Accept": "application/json",
+            },
+        });
+        result = await response.json();
+    } catch (error) {
+        return;
+    }
+
+    if (!result || !Array.isArray(result.queues)) {
+        return;
+    }
+
+    let anyActive = false;
+
+    result.queues.forEach((queue) => {
+        const row = document.querySelector(`[data-downloader-row][data-downloader-id="${cssEscape(String(queue.downloader_id || ""))}"]`);
+
+        if (!row) {
+            return;
+        }
+
+        const activeCount = Number(queue.active_count || 0);
+        const totalCount = Number(queue.total_count || activeCount || 0);
+
+        if (activeCount > 0) {
+            anyActive = true;
+        }
+
+        updateDownloaderRow(row, queue, activeCount, totalCount);
+    });
+
+    updateDownloadingStat(result.queues);
+
+    if (!anyActive) {
+        stopDownloaderCardPolling();
+    }
+}
+
+function updateDownloaderRow(row, queue, activeCount, totalCount) {
+    const meta = row.querySelector("[data-downloader-meta]");
+    const status = row.querySelector("[data-downloader-status]");
+    const dot = row.querySelector("[data-downloader-dot]");
+    const version = queue.version || "Unknown";
+
+    if (!meta || !status) {
+        return;
+    }
+
+    row.classList.toggle("downloader-active", activeCount > 0);
+
+    if (dot) {
+        dot.classList.toggle("warning", !queue.success);
+    }
+
+    if (!queue.success) {
+        meta.innerHTML = `
+            <span>${escapeHtml(version)}</span>
+            <span class="dashboard-downloader-state warning">Unavailable</span>
+        `;
+        status.className = "dashboard-service-status warning";
+        status.textContent = "⚠ Warning";
+        return;
+    }
+
+    if (activeCount > 0) {
+        const parts = [
+            `<span>${escapeHtml(version)}</span>`,
+            `<span class="dashboard-downloader-state active">Downloading (${escapeHtml(String(activeCount))})</span>`,
+        ];
+
+        if (queue.size) {
+            parts.push(`<span>${escapeHtml(queue.size)}</span>`);
+        }
+
+        if (queue.speed && queue.speed !== "0 B/s") {
+            parts.push(`<span class="dashboard-downloader-speed">${escapeHtml(queue.speed)}</span>`);
+        }
+
+        if (queue.timeleft && queue.timeleft !== "0:00:00") {
+            parts.push(`<span>${escapeHtml(queue.timeleft)} remaining</span>`);
+        }
+
+        if (totalCount > activeCount) {
+            parts.push(`<span>${escapeHtml(String(totalCount))} queued</span>`);
+        }
+
+        meta.innerHTML = parts.join("\n");
+        status.className = "dashboard-service-status good";
+        status.textContent = "✓ Healthy";
+        return;
+    }
+
+    meta.innerHTML = `
+        <span>${escapeHtml(version)}</span>
+        <span class="dashboard-downloader-state idle">Idle</span>
+    `;
+    status.className = "dashboard-service-status good";
+    status.textContent = "✓ Healthy";
+}
+
+function updateDownloadingStat(queues) {
+    queues.forEach((queue) => {
+        const tile = document.querySelector(`[data-action-item-kind="downloader"][data-action-item-id="${cssEscape(String(queue.downloader_id || ""))}"]`);
+
+        if (!tile) {
+            return;
+        }
+
+        const value = tile.querySelector("[data-action-item-value]");
+
+        if (value) {
+            value.textContent = String(Number(queue.active_count || 0));
+        }
+    });
+}
+
+function cssEscape(value) {
+    if (window.CSS && typeof window.CSS.escape === "function") {
+        return window.CSS.escape(value);
+    }
+
+    return value.replace(/[^a-zA-Z0-9_-]/g, "\\$&");
 }
 
 function renderDashboardActivityEvent(event, fileDetailLevel = "filename") {
     const item = document.createElement("div");
     item.className = `activity-event ${escapeHtml(event.status || "info")}`;
 
-    const route = activityRouteText(event);
-    const mediaTitle = event.media_title ? `<div class="dashboard-activity-extra">${escapeHtml(event.media_title)}</div>` : "";
-
-    let fileValue = "";
-
-    if (fileDetailLevel === "path" && event.file_path) {
-        fileValue = event.file_path;
-    } else if (event.file_name) {
-        fileValue = event.file_name;
-    } else if (event.file_path) {
-        fileValue = event.file_path;
+    if (event.lifecycle_id) {
+        item.classList.add("lifecycle-clickable");
+        item.dataset.lifecycleId = event.lifecycle_id;
+        item.dataset.lifecycleDisplayTitle = dashboardActivityTitle(event);
+        item.setAttribute("role", "button");
+        item.setAttribute("tabindex", "0");
+        item.setAttribute("title", "Open lifecycle");
     }
 
-    const fileHtml = fileValue ? `<div class="dashboard-activity-file">${escapeHtml(fileValue)}</div>` : "";
-    const detailsHtml = event.details ? `<div class="dashboard-activity-details">${escapeHtml(event.details)}</div>` : "";
+    const title = dashboardActivityTitle(event);
+    const subtitle = dashboardActivitySubtitle(event);
+    const subtitleHtml = subtitle ? `<div class="activity-event-meta">${escapeHtml(subtitle)}</div>` : "";
+    const details = dashboardActivityDetails(event, fileDetailLevel);
+    const detailsHtml = details ? `<div class="dashboard-activity-file">${escapeHtml(details)}</div>` : "";
 
     item.innerHTML = `
         <div class="activity-event-dot"></div>
         <div class="activity-event-body">
             <div class="activity-event-top">
-                <div class="activity-event-title">${escapeHtml(event.event_type || "Activity")}</div>
+                <div class="activity-event-title">${escapeHtml(title)}</div>
                 <div class="activity-event-time">${escapeHtml(event.created_at || "Now")}</div>
             </div>
-            <div class="activity-event-meta">${escapeHtml(route)}</div>
-            ${mediaTitle}
-            ${fileHtml}
+            ${subtitleHtml}
             ${detailsHtml}
         </div>
     `;
 
     return item;
+}
+
+function dashboardActivityTitle(event) {
+    return event.media_title || event.title || event.event_type || "Activity";
+}
+
+function dashboardActivitySubtitle(event) {
+    const eventType = String(event.event_type || "").trim();
+    const title = String(dashboardActivityTitle(event) || "").trim();
+    const sourceName = String(event.source_name || "").trim();
+
+    const parts = [];
+
+    if (eventType && eventType !== title) {
+        parts.push(eventType);
+    }
+
+    if (sourceName && sourceName !== eventType && sourceName !== title) {
+        parts.push(sourceName);
+    }
+
+    return parts.join(" • ");
+}
+
+function dashboardActivityDetails(event, fileDetailLevel = "filename") {
+    const details = String(event.details || "").trim();
+
+    if (details && details !== event.event_type && details !== event.media_title) {
+        return details;
+    }
+
+    if (fileDetailLevel === "path" && event.file_path) {
+        return event.file_path;
+    }
+
+    if (event.file_name) {
+        return event.file_name;
+    }
+
+    if (event.file_path) {
+        return event.file_path;
+    }
+
+    return "";
 }
 
 function renderActivityPageEvent(event, fileDetailLevel) {
@@ -1283,6 +1665,1696 @@ function formatSourceName(sourceType) {
     };
 
     return labels[sourceType] || sourceType;
+}
+
+
+function initLifecyclePopup() {
+    const backdrop = document.querySelector("[data-lifecycle-modal-backdrop]");
+
+    if (!backdrop) {
+        return;
+    }
+
+    const modal = backdrop.querySelector("[data-lifecycle-modal]");
+    const title = backdrop.querySelector("[data-lifecycle-modal-title]");
+    const body = backdrop.querySelector("[data-lifecycle-modal-body]");
+    const closeButtons = backdrop.querySelectorAll("[data-lifecycle-close]");
+    const maximizeButton = backdrop.querySelector("[data-lifecycle-maximize]");
+
+    document.addEventListener("click", (event) => {
+        const row = event.target.closest("[data-lifecycle-id]");
+
+        if (!row) {
+            return;
+        }
+
+        const lifecycleId = row.dataset.lifecycleId;
+
+        if (!lifecycleId) {
+            return;
+        }
+
+        event.preventDefault();
+        const clickedTitle = row.dataset.lifecycleDisplayTitle || row.querySelector(".dashboard-2-activity-title, .activity-event-title")?.textContent?.trim() || "";
+        openLifecycleModal(lifecycleId, backdrop, title, body, clickedTitle);
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !backdrop.classList.contains("hidden")) {
+            closeLifecycleModal(backdrop);
+            return;
+        }
+
+        if ((event.key === "Enter" || event.key === " ") && event.target.matches("[data-lifecycle-id]")) {
+            event.preventDefault();
+            openLifecycleModal(event.target.dataset.lifecycleId, backdrop, title, body, event.target.dataset.lifecycleDisplayTitle || "");
+        }
+    });
+
+    closeButtons.forEach((button) => {
+        button.addEventListener("click", () => closeLifecycleModal(backdrop));
+    });
+
+    backdrop.addEventListener("click", (event) => {
+        if (event.target === backdrop) {
+            closeLifecycleModal(backdrop);
+        }
+    });
+
+    if (maximizeButton && modal) {
+        maximizeButton.addEventListener("click", () => {
+            modal.classList.toggle("maximized");
+            maximizeButton.textContent = modal.classList.contains("maximized") ? "❐" : "□";
+        });
+    }
+}
+
+async function refreshOpenLifecyclePopup() {
+    if (!LIFECYCLE_CURRENT_DATA || !LIFECYCLE_CURRENT_DATA.lifecycle || !LIFECYCLE_CURRENT_DATA.lifecycle.id) {
+        return;
+    }
+
+    const backdrop = document.querySelector("[data-lifecycle-modal-backdrop]");
+
+    if (!backdrop || backdrop.classList.contains("hidden")) {
+        return;
+    }
+
+    const titleElement = backdrop.querySelector("[data-lifecycle-modal-title]");
+    const bodyElement = backdrop.querySelector("[data-lifecycle-modal-body]");
+
+    if (!titleElement || !bodyElement) {
+        return;
+    }
+
+    const lifecycleId = LIFECYCLE_CURRENT_DATA.lifecycle.id;
+
+    try {
+        const response = await fetch(`/api/lifecycle/${encodeURIComponent(lifecycleId)}`, {
+            headers: {
+                "Accept": "application/json",
+            },
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            return;
+        }
+
+        syncTvSeasonOpenStateFromDom();
+        if (displayTitle) {
+            data.display_title = displayTitle;
+        }
+
+        renderLifecycleModal(data, titleElement, bodyElement);
+    } catch (error) {
+        // Keep the existing popup content if a live refresh fails.
+    }
+}
+
+async function openLifecycleModal(lifecycleId, backdrop, titleElement, bodyElement, displayTitle = "") {
+    backdrop.classList.remove("hidden");
+    document.body.classList.add("modal-open");
+    titleElement.textContent = "";
+    bodyElement.innerHTML = `<div class="lifecycle-loading lifecycle-loading-quiet"></div>`;
+
+    try {
+        const response = await fetch(`/api/lifecycle/${encodeURIComponent(lifecycleId)}`);
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.detail || data.message || "Lifecycle unavailable.");
+        }
+
+        if (displayTitle) {
+            data.display_title = displayTitle;
+        }
+
+        renderLifecycleModal(data, titleElement, bodyElement);
+    } catch (error) {
+        titleElement.textContent = "Lifecycle unavailable";
+        bodyElement.innerHTML = `<div class="lifecycle-error">${escapeHtml(error.message || "Unable to load lifecycle.")}</div>`;
+    }
+}
+
+let LIFECYCLE_CURRENT_DATA = null;
+let LIFECYCLE_CURRENT_POLL_TIMER = null;
+const LIFECYCLE_TV_SEASON_OPEN_STATE = new Map();
+
+function tvSeasonStateKey(seasonNumber) {
+    const lifecycleId = LIFECYCLE_CURRENT_DATA?.lifecycle?.id || "unknown";
+    return `${lifecycleId}:${String(seasonNumber || "")}`;
+}
+
+function tvSeasonShouldOpen(season) {
+    const seasonNumber = season?.season_number;
+    const key = tvSeasonStateKey(seasonNumber);
+
+    if (LIFECYCLE_TV_SEASON_OPEN_STATE.has(key)) {
+        return LIFECYCLE_TV_SEASON_OPEN_STATE.get(key) === true;
+    }
+
+    return season?.status === "in_progress";
+}
+
+function syncTvSeasonOpenStateFromDom() {
+    document.querySelectorAll("details.lifecycle-tv-season-row-wrap[data-season-number]").forEach((details) => {
+        LIFECYCLE_TV_SEASON_OPEN_STATE.set(tvSeasonStateKey(details.dataset.seasonNumber), details.open === true);
+    });
+}
+
+function wireTvSeasonOpenTracking() {
+    if (window.__mediasyncTvSeasonOpenTrackingWired) {
+        return;
+    }
+
+    window.__mediasyncTvSeasonOpenTrackingWired = true;
+
+    document.addEventListener("toggle", (event) => {
+        const details = event.target;
+
+        if (!details || !details.matches || !details.matches("details.lifecycle-tv-season-row-wrap[data-season-number]")) {
+            return;
+        }
+
+        LIFECYCLE_TV_SEASON_OPEN_STATE.set(tvSeasonStateKey(details.dataset.seasonNumber), details.open === true);
+    }, true);
+}
+
+function closeLifecycleModal(backdrop) {
+    stopLifecycleCurrentPolling();
+    LIFECYCLE_CURRENT_DATA = null;
+    LIFECYCLE_TV_SEASON_OPEN_STATE.clear();
+    backdrop.classList.add("hidden");
+    document.body.classList.remove("modal-open");
+}
+
+function renderLifecycleModal(data, titleElement, bodyElement) {
+    const popupType = lifecyclePopupType(data);
+
+    if (popupType === "tv") {
+        renderTvLifecycleModal(data, titleElement, bodyElement);
+        return;
+    }
+
+    renderMovieLifecycleModal(data, titleElement, bodyElement);
+}
+
+function renderMovieLifecycleModal(data, titleElement, bodyElement) {
+    renderLifecycleDetailModal(data, titleElement, bodyElement, "movie");
+}
+
+function renderTvLifecycleModal(data, titleElement, bodyElement) {
+    renderLifecycleDetailModal(data, titleElement, bodyElement, "tv");
+}
+
+function renderLifecycleDetailModal(data, titleElement, bodyElement, popupType) {
+    const lifecycle = data.lifecycle || {};
+    const events = Array.isArray(data.events) ? data.events : [];
+    const mediaServer = data.media_server || {};
+    const title = (popupType === "tv" && data.display_title) ? data.display_title : (lifecycle.title || "Unknown Title");
+    const mediaLabel = popupType === "tv" ? "TV Series" : "Movie";
+    const origin = lifecycleOriginInfo(lifecycle, events);
+    const isRequestOrigin = origin.isRequestOrigin;
+    const visibleEvents = normalizeVisibleLifecycleEvents(events, lifecycle, mediaServer, data.tv_overview || null);
+
+    LIFECYCLE_CURRENT_DATA = {
+        lifecycle,
+        events: visibleEvents,
+        mediaServer,
+        popupType,
+        tvOverview: data.tv_overview || null,
+        displayTitle: data.display_title || LIFECYCLE_CURRENT_DATA?.displayTitle || "",
+    };
+
+    titleElement.innerHTML = `${escapeHtml(title)} <span class="lifecycle-title-badge">${escapeHtml(mediaLabel)}</span>`;
+    bodyElement.dataset.lifecycleMediaType = popupType;
+
+    bodyElement.innerHTML = `
+        <section class="lifecycle-popup-shell lifecycle-popup-${escapeHtml(popupType)}" data-lifecycle-popup-type="${escapeHtml(popupType)}">
+            <section class="lifecycle-popup-top lifecycle-popup-top-compact">
+                <div class="lifecycle-hero-poster">
+                    ${lifecyclePosterMarkup(lifecycle, data.tv_overview || null)}
+                </div>
+
+                <div class="lifecycle-hero-main">
+                    <div class="lifecycle-hero-title-row">
+                        <h3>${escapeHtml(title)}</h3>
+                        <span class="lifecycle-title-badge inline">${escapeHtml(mediaLabel)}</span>
+                    </div>
+                    <div class="lifecycle-chip-row">
+                        ${lifecycleChip(lifecycle.quality_profile)}
+                    </div>
+                    <div class="lifecycle-hero-meta-grid">
+                        ${isRequestOrigin ? lifecycleHeroMeta("Requested By", origin.createdBy || "—") : ""}
+                        ${lifecycleHeroMeta(isRequestOrigin ? "Via" : "Source", origin.sourceApp || lifecycleSourceLabel(origin.sourceType))}
+                        ${lifecycleHeroMeta("Created", formatLifecycleTime(lifecycle.created_at))}
+                    </div>
+                </div>
+            </section>
+
+            <section class="lifecycle-popup-main-grid lifecycle-popup-main-grid-three">
+                <aside class="lifecycle-detail-left">
+                    ${renderLifecycleMetadataPanel(lifecycle, data.tv_overview, popupType, isRequestOrigin, origin)}
+                </aside>
+
+                <section class="lifecycle-detail-center">
+                    <div class="lifecycle-section-title">Progress</div>
+                    <div class="lifecycle-timeline" data-lifecycle-timeline>
+                        ${renderLifecycleTimeline(visibleEvents, popupType)}
+                    </div>
+                </section>
+
+                <aside class="lifecycle-current-card lifecycle-detail-right" data-lifecycle-current-card>
+                    ${renderCurrentLifecycleActivity(visibleEvents, mediaServer, popupType, lifecycle, data.tv_overview)}
+                </aside>
+            </section>
+
+            ${popupType === "tv" ? renderTvSeasonOverview(data.tv_overview) : ""}
+        </section>
+    `;
+
+    startLifecycleCurrentPolling();
+}
+
+function lifecyclePopupType(data) {
+    const lifecycle = data.lifecycle || {};
+    const events = Array.isArray(data.events) ? data.events : [];
+    const lifecycleMediaType = String(lifecycle.media_type || "").trim().toLowerCase();
+
+    if (events.some((event) => String(event.source_type || "").trim().toLowerCase() === "sonarr")) {
+        return "tv";
+    }
+
+    if (["tv", "show", "series", "tvshows"].includes(lifecycleMediaType)) {
+        return "tv";
+    }
+
+    return "movie";
+}
+
+function lifecyclePosterMarkup(lifecycle, tvOverview) {
+    const posterUrl = lifecycle.poster_url || (tvOverview && (tvOverview.poster_url || tvOverview.series?.poster_url)) || "";
+    const proxiedPosterUrl = posterUrl && posterUrl.startsWith("http")
+        ? `/api/image-proxy?url=${encodeURIComponent(posterUrl)}`
+        : posterUrl;
+
+    if (posterUrl) {
+        return `
+            <div class="lifecycle-poster-frame">
+                <img class="lifecycle-poster" src="${escapeHtml(proxiedPosterUrl)}" alt="${escapeHtml(lifecycle.title || "Poster")}" onerror="
+if (!this.dataset.retryAttempted) {
+    this.dataset.retryAttempted='true';
+    const img=this;
+    setTimeout(() => {
+        img.src = img.src + (img.src.includes('?') ? '&' : '?') + 'retry=' + Date.now();
+    }, 2000);
+} else {
+    this.remove();
+    this.parentElement.classList.add('poster-missing');
+    this.parentElement.textContent='No Poster';
+}
+">
+            </div>
+        `;
+    }
+
+    return `<div class="lifecycle-poster-frame poster-missing">No Poster</div>`;
+}
+
+function lifecycleChip(value) {
+    if (!value) {
+        return "";
+    }
+
+    return `<span class="lifecycle-chip">${escapeHtml(value)}</span>`;
+}
+
+function lifecycleHeroMeta(label, value) {
+    return `
+        <div class="lifecycle-hero-meta-item">
+            <span>${escapeHtml(label)}</span>
+            <strong>${escapeHtml(value || "—")}</strong>
+        </div>
+    `;
+}
+
+function lifecycleOriginInfo(lifecycle, events) {
+    const requestEvent = Array.isArray(events)
+        ? events.find((event) => String(event.stage || "").trim().toLowerCase() === "requested")
+        : null;
+
+    if (requestEvent) {
+        return {
+            sourceApp: requestEvent.source_name || lifecycle.source_app || lifecycleSourceLabel(requestEvent.source_type || lifecycle.source_type),
+            sourceType: requestEvent.source_type || lifecycle.source_type || "seerr",
+            createdBy: lifecycle.created_by || "—",
+            isRequestOrigin: true,
+        };
+    }
+
+    return {
+        sourceApp: lifecycle.source_app || lifecycleSourceLabel(lifecycle.source_type),
+        sourceType: lifecycle.source_type || "",
+        createdBy: lifecycle.created_by || "",
+        isRequestOrigin: lifecycleHasRequestOrigin(lifecycle, events),
+    };
+}
+
+function renderLifecycleMetadataPanel(lifecycle, tvOverview, popupType, isRequestOrigin = true, origin = null) {
+    const originInfo = origin || lifecycleOriginInfo(lifecycle, []);
+    const rows = isRequestOrigin
+        ? [
+            ["Requested By", originInfo.createdBy || lifecycle.created_by],
+            ["Requested Via", originInfo.sourceApp || lifecycle.source_app || lifecycleSourceLabel(lifecycle.source_type)],
+            ["Request Time", formatLifecycleTime(lifecycle.created_at)],
+            ["Request Type", popupType === "tv" ? "TV Series" : "Movie"],
+            ["Quality Profile", lifecycle.quality_profile],
+        ]
+        : [
+            ["Source", originInfo.sourceApp || lifecycle.source_app || lifecycleSourceLabel(lifecycle.source_type)],
+            ["Created", formatLifecycleTime(lifecycle.created_at)],
+            ["Type", popupType === "tv" ? "TV Series" : "Movie"],
+            ["Quality Profile", lifecycle.quality_profile],
+        ];
+
+    if (popupType === "tv") {
+        const series = tvOverview && tvOverview.series ? tvOverview.series : {};
+        const monitored = Array.isArray(series.monitored_seasons) ? series.monitored_seasons : [];
+        rows.push(["Monitored Seasons", monitored.length ? [...monitored].sort((a, b) => Number(a) - Number(b)).join(", ") : "—"]);
+        if (isRequestOrigin) {
+            rows.push(["Requested", monitored.length ? monitoredSeasonLabel(monitored) : "—"]);
+        }
+    }
+
+    const infoRows = [
+        ["Year", lifecycleYear(lifecycle.title, lifecycle.created_at)],
+        ["TMDB ID", lifecycle.tmdb_id],
+        ["TVDB ID", lifecycle.tvdb_id],
+        ["IMDB ID", lifecycle.imdb_id],
+    ];
+
+    if (popupType === "tv" && tvOverview && tvOverview.series) {
+        infoRows.push(["Network", tvOverview.series.network]);
+        infoRows.push(["Runtime", tvOverview.series.runtime ? `~ ${tvOverview.series.runtime} min` : ""]);
+        infoRows.push(["Status", tvOverview.series.status]);
+        infoRows.push(["Episodes", `${tvOverview.series.episodes_available || 0} / ${tvOverview.series.episodes_total || 0}`]);
+    }
+
+    return `
+        <div class="lifecycle-side-card">
+            <div class="lifecycle-section-title">${isRequestOrigin ? "Request Details" : "Media Details"}</div>
+            ${rows.map(([label, value]) => lifecycleInfoRow(label, value)).join("")}
+        </div>
+        <div class="lifecycle-side-card">
+            <div class="lifecycle-section-title">${popupType === "tv" ? "Series Information" : "Media Information"}</div>
+            ${infoRows.map(([label, value]) => lifecycleInfoRow(label, value)).join("")}
+        </div>
+    `;
+}
+
+function lifecycleInfoRow(label, value) {
+    if (value === undefined || value === null || value === "") {
+        value = "—";
+    }
+
+    return `
+        <div class="lifecycle-info-row">
+            <span>${escapeHtml(label)}</span>
+            <strong>${escapeHtml(value)}</strong>
+        </div>
+    `;
+}
+
+function lifecycleHasRequestOrigin(lifecycle, rawEvents = []) {
+    const sourceType = String(lifecycle.source_type || "").trim().toLowerCase();
+    const sourceApp = String(lifecycle.source_app || "").trim().toLowerCase();
+
+    if (sourceType === "seerr" || sourceApp.includes("seerr") || sourceApp.includes("overseerr") || sourceApp.includes("jellyseerr")) {
+        return true;
+    }
+
+    return rawEvents.some((event) => {
+        const stage = String(event.stage || event.title || event.event_type || "").trim().toLowerCase();
+        const eventSource = String(event.source_type || "").trim().toLowerCase();
+        return eventSource === "seerr" && stage === "requested";
+    });
+}
+
+function normalizeVisibleLifecycleEvents(events, lifecycle, mediaServer, tvOverview = null) {
+    const normalized = [];
+
+    events.forEach((event) => {
+        const item = normalizeLifecycleEvent(event, lifecycle, mediaServer);
+
+        if (!item) {
+            return;
+        }
+
+        normalized.push(item);
+    });
+
+    return buildLifecycleStageModel(normalized, lifecycle, mediaServer, tvOverview);
+}
+
+function normalizeLifecycleEvent(event, lifecycle, mediaServer) {
+    const stageText = String(event.stage || event.title || event.activity_event_type || "").trim();
+    const lowerStage = stageText.toLowerCase();
+    const sourceType = String(event.source_type || "").trim().toLowerCase();
+    const sourceName = event.source_name || lifecycleSourceLabel(sourceType);
+
+    if (sourceType === "seerr" && lowerStage === "available") {
+        return null;
+    }
+
+    if (["approved", "processing"].includes(lowerStage) && sourceType === "seerr") {
+        return null;
+    }
+
+    let stage = stageText || "Lifecycle Event";
+    let detail = event.details || "";
+    let normalizedSourceType = sourceType;
+    let normalizedSourceName = sourceName;
+    let status = event.status || "success";
+    let kind = "event";
+
+    if (lowerStage === "requested") {
+        stage = "Requested";
+        kind = "requested";
+        detail = "";
+    } else if (lowerStage === "grabbed") {
+        stage = `Sent to ${sourceName || lifecycleSourceLabel(sourceType)}`;
+        kind = "grabbed";
+        detail = "";
+    } else if (lowerStage.includes("download started")) {
+        stage = "Downloading";
+        kind = "download_started";
+        detail = "";
+    } else if (lowerStage.includes("download completed")) {
+        stage = "Downloaded";
+        kind = "download_completed";
+        detail = "";
+    } else if (lowerStage.includes("download cancelled")) {
+        stage = "Download Cancelled";
+        kind = "download_cancelled";
+        detail = "";
+        status = "cancelled";
+    } else if (lowerStage.includes("download failed")) {
+        stage = "Download Failed";
+        kind = "download_failed";
+        detail = "";
+        status = "error";
+    } else if (lowerStage === "imported") {
+        stage = "Imported";
+        kind = "imported";
+        detail = "";
+    } else if (lowerStage.includes("library sync") || lowerStage.includes("library scan")) {
+        stage = "Library Scan";
+        kind = "library_scan";
+        normalizedSourceType = "mediasync";
+        normalizedSourceName = event.activity_library_name || "Library";
+        detail = event.activity_library_name || "";
+    } else if (lowerStage.startsWith("available in")) {
+        stage = stageText;
+        kind = "available";
+        detail = event.activity_library_name || "";
+    }
+
+    return {
+        ...event,
+        stage,
+        details: detail,
+        source_type: normalizedSourceType,
+        source_name: normalizedSourceName,
+        status,
+        kind,
+    };
+}
+
+
+function _safeNumber(value, fallback = 0) {
+    const parsed = Number(value);
+
+    if (Number.isFinite(parsed)) {
+        return parsed;
+    }
+
+    return fallback;
+}
+
+function buildLifecycleStageModel(events, lifecycle, mediaServer, tvOverview = null) {
+    const isRequestOrigin = lifecycleHasRequestOrigin(lifecycle, events);
+    const arrType = lifecycleArrType(events, lifecycle);
+    const arrLabel = lifecycleArrLabel(events, arrType);
+    const mediaServerType = String((mediaServer || {}).server_type || "").trim().toLowerCase();
+    const mediaServerLabelText = mediaServerLabel(mediaServerType) || "Media Server";
+
+    const requested = firstLifecycleEvent(events, ["requested"]);
+    const grabbed = firstLifecycleEvent(events, ["grabbed"]);
+    const downloadStarted = firstLifecycleEvent(events, ["download_started"]);
+    const downloadCompleted = firstLifecycleEvent(events, ["download_completed"]);
+    const downloadCancelled = firstLifecycleEvent(events, ["download_cancelled"]);
+    const downloadFailed = firstLifecycleEvent(events, ["download_failed"]);
+    const imported = firstLifecycleEvent(events, ["imported"]);
+    const libraryScan = firstLifecycleEvent(events, ["library_scan"]);
+    const available = firstLifecycleEvent(events, ["available"]);
+
+    const mediaType = String(lifecycle.media_type || "").toLowerCase();
+    const isTvLifecycle = arrType === "sonarr" || ["tv", "show", "series", "tvshows"].includes(mediaType);
+
+    if (isTvLifecycle) {
+        return buildTvLifecycleStageModel({
+            events,
+            lifecycle,
+            mediaServer,
+            isRequestOrigin,
+            arrType,
+            arrLabel,
+            mediaServerType,
+            mediaServerLabelText,
+            requested,
+            grabbed,
+            downloadStarted,
+            downloadCompleted,
+            downloadCancelled,
+            downloadFailed,
+            imported,
+            libraryScan,
+            available,
+            tvOverview,
+        });
+    }
+
+    const stages = [];
+
+    if (isRequestOrigin) {
+        stages.push(lifecycleStage({
+            id: "request",
+            completeLabel: "Requested",
+            activeLabel: "Requested",
+            futureLabel: "Waiting for Request",
+            source_type: requested?.source_type || lifecycle.source_type || "seerr",
+            source_name: requested?.source_name || lifecycle.source_app || lifecycleSourceLabel(lifecycle.source_type),
+            event: requested,
+            complete: Boolean(requested || lifecycle.id),
+            active: false,
+        }));
+    }
+
+    stages.push(
+        lifecycleStage({
+            id: "arr",
+            completeLabel: `Sent to ${arrLabel}`,
+            activeLabel: `Sending to ${arrLabel}`,
+            futureLabel: `Waiting for ${arrLabel}`,
+            source_type: arrType,
+            source_name: grabbed?.source_name || arrLabel,
+            event: grabbed,
+            complete: Boolean(grabbed || downloadStarted || downloadCompleted || imported || libraryScan || available),
+            active: Boolean((isRequestOrigin ? requested : lifecycle.id) && !grabbed && !downloadStarted && !downloadCompleted && !downloadCancelled && !downloadFailed),
+        }),
+        lifecycleStage({
+            id: "download",
+            completeLabel: downloadCancelled ? "Download Cancelled" : (downloadFailed ? "Download Failed" : "Downloaded"),
+            activeLabel: downloadStarted ? "Downloading" : "Waiting for Download",
+            futureLabel: "Waiting for Download",
+            source_type: downloadStarted?.source_type || downloadCompleted?.source_type || downloadCancelled?.source_type || downloadFailed?.source_type || "sabnzbd",
+            source_name: downloadStarted?.source_name || downloadCompleted?.source_name || downloadCancelled?.source_name || downloadFailed?.source_name || "SABnzbd",
+            event: downloadFailed || downloadCancelled || downloadCompleted || downloadStarted,
+            complete: Boolean(downloadCompleted || downloadCancelled || downloadFailed || imported || libraryScan || available),
+            active: Boolean((grabbed || requested) && !downloadCompleted && !downloadCancelled && !downloadFailed && !imported && !libraryScan && !available),
+            failed: Boolean(downloadFailed),
+            cancelled: Boolean(downloadCancelled),
+        }),
+        lifecycleStage({
+            id: "import",
+            completeLabel: "Imported",
+            activeLabel: "Importing",
+            futureLabel: "Waiting for Import",
+            source_type: imported?.source_type || grabbed?.source_type || arrType,
+            source_name: imported?.source_name || grabbed?.source_name || arrLabel,
+            event: imported || downloadCompleted,
+            complete: Boolean(imported || libraryScan || available),
+            active: Boolean(downloadCompleted && !imported && !libraryScan && !available),
+        }),
+        lifecycleStage({
+            id: "scan",
+            completeLabel: "Library Scanned",
+            activeLabel: "Library Scan",
+            futureLabel: "Waiting for Scan",
+            source_type: "mediasync",
+            source_name: libraryScan?.source_name || libraryScan?.activity_library_name || "Library",
+            event: libraryScan,
+            complete: Boolean(available),
+            active: Boolean((imported || libraryScan) && !available),
+        }),
+        lifecycleStage({
+            id: "available",
+            completeLabel: `Available in ${mediaServerLabelText}`,
+            activeLabel: `Waiting for ${mediaServerLabelText}`,
+            futureLabel: `Waiting for ${mediaServerLabelText}`,
+            source_type: mediaServerType || available?.source_type || "media_server",
+            source_name: mediaServerLabelText,
+            event: available,
+            complete: Boolean(available),
+            active: Boolean(libraryScan && !available),
+        }),
+    );
+
+    const activeIndex = stages.findIndex((stage) => stage.state === "active");
+
+    if (activeIndex === -1 && !stages[stages.length - 1].complete) {
+        const firstFutureIndex = stages.findIndex((stage) => stage.state === "future");
+
+        if (firstFutureIndex >= 0) {
+            stages[firstFutureIndex].state = "active";
+            stages[firstFutureIndex].label = stages[firstFutureIndex].activeLabel;
+        }
+    }
+
+    return stages;
+}
+
+function buildTvLifecycleStageModel(context) {
+    const {
+        events,
+        lifecycle,
+        isRequestOrigin,
+        arrType,
+        arrLabel,
+        mediaServerType,
+        mediaServerLabelText,
+        tvOverview,
+    } = context;
+
+    const requested = latestLifecycleEvent(events, ["requested"]);
+    const grabbed = latestLifecycleEvent(events, ["grabbed"]);
+    const downloadStarted = latestLifecycleEvent(events, ["download_started"]);
+    const downloadCompleted = latestLifecycleEvent(events, ["download_completed"]);
+    const downloadCancelled = latestLifecycleEvent(events, ["download_cancelled"]);
+    const downloadFailed = latestLifecycleEvent(events, ["download_failed"]);
+    const imported = latestLifecycleEvent(events, ["imported"]);
+    const libraryScan = latestLifecycleEvent(events, ["library_scan"]);
+    const available = latestLifecycleEvent(events, ["available"]);
+
+    const activeTvDownloading = Boolean(_safeNumber((tvOverview || {}).series?.episodes_downloading) > 0 && !availableIsCurrentForSequence(available, downloadStarted));
+
+    const successfulAfterDownload = latestOfLifecycleEvents([imported, libraryScan, available]);
+    const downloadCancelledIsTerminal = Boolean(downloadCancelled && !successfulAfterDownload);
+    const downloadFailedIsTerminal = Boolean(downloadFailed && !successfulAfterDownload);
+    const downloadTerminal = latestOfLifecycleEvents([downloadCompleted, downloadCancelledIsTerminal ? downloadCancelled : null, downloadFailedIsTerminal ? downloadFailed : null]);
+    const downloadTerminalAfterStart = Boolean(downloadTerminal && (!downloadStarted || lifecycleEventIsSameOrAfter(downloadTerminal, downloadStarted)));
+    const importedAfterDownload = Boolean(imported && (!downloadStarted || lifecycleEventIsAfter(imported, downloadStarted)) && (!downloadCompleted || lifecycleEventIsSameOrAfter(imported, downloadCompleted)));
+    const scanAfterImport = Boolean(libraryScan && (!imported || lifecycleEventIsSameOrAfter(libraryScan, imported)) && (!downloadStarted || lifecycleEventIsAfter(libraryScan, downloadStarted)));
+    const availableAfterScan = Boolean(available && (!libraryScan || lifecycleEventIsSameOrAfter(available, libraryScan)) && (!downloadStarted || lifecycleEventIsAfter(available, downloadStarted)));
+
+    const downloadIsActive = Boolean(activeTvDownloading || (downloadStarted && !downloadTerminalAfterStart && !importedAfterDownload && !availableAfterScan));
+    const downloadIsComplete = Boolean(downloadTerminalAfterStart || importedAfterDownload || scanAfterImport || availableAfterScan);
+    const importIsActive = Boolean(downloadIsComplete && !importedAfterDownload && !downloadCancelledIsTerminal && !downloadFailedIsTerminal && !availableAfterScan);
+    const importIsComplete = Boolean(importedAfterDownload || scanAfterImport || availableAfterScan);
+    const scanIsActive = Boolean(importIsComplete && !availableAfterScan);
+    const scanIsComplete = Boolean(availableAfterScan);
+
+    const stages = [];
+
+    if (isRequestOrigin) {
+        stages.push(lifecycleStage({
+            id: "request",
+            completeLabel: "Requested",
+            activeLabel: "Requested",
+            futureLabel: "Waiting for Request",
+            source_type: requested?.source_type || lifecycle.source_type || "seerr",
+            source_name: requested?.source_name || lifecycle.source_app || lifecycleSourceLabel(lifecycle.source_type),
+            event: requested,
+            complete: Boolean(requested || lifecycle.id),
+            active: false,
+        }));
+    }
+
+    stages.push(
+        lifecycleStage({
+            id: "arr",
+            completeLabel: `Sent to ${arrLabel}`,
+            activeLabel: `Sending to ${arrLabel}`,
+            futureLabel: `Waiting for ${arrLabel}`,
+            source_type: arrType,
+            source_name: grabbed?.source_name || arrLabel,
+            event: grabbed,
+            complete: Boolean(grabbed || downloadStarted || lifecycle.id),
+            active: false,
+        }),
+        lifecycleStage({
+            id: "download",
+            completeLabel: downloadCancelled ? "Download Cancelled" : (downloadFailed ? "Download Failed" : "Downloaded"),
+            activeLabel: "Downloading",
+            futureLabel: "Waiting for Download",
+            source_type: downloadStarted?.source_type || downloadCompleted?.source_type || downloadCancelled?.source_type || downloadFailed?.source_type || "sabnzbd",
+            source_name: downloadStarted?.source_name || downloadCompleted?.source_name || downloadCancelled?.source_name || downloadFailed?.source_name || "SABnzbd",
+            event: (downloadFailedIsTerminal ? downloadFailed : null) || (downloadCancelledIsTerminal ? downloadCancelled : null) || downloadTerminal || downloadStarted,
+            complete: downloadIsComplete,
+            active: downloadIsActive,
+            failed: Boolean(downloadFailedIsTerminal && lifecycleEventIsSameOrAfter(downloadFailed, downloadStarted)),
+            cancelled: Boolean(downloadCancelledIsTerminal && lifecycleEventIsSameOrAfter(downloadCancelled, downloadStarted)),
+        }),
+        lifecycleStage({
+            id: "import",
+            completeLabel: "Imported",
+            activeLabel: "Importing",
+            futureLabel: "Waiting for Import",
+            source_type: imported?.source_type || grabbed?.source_type || arrType,
+            source_name: imported?.source_name || grabbed?.source_name || arrLabel,
+            event: importedAfterDownload ? imported : downloadTerminal,
+            complete: importIsComplete,
+            active: importIsActive,
+        }),
+        lifecycleStage({
+            id: "scan",
+            completeLabel: "Smart Scan",
+            activeLabel: "Smart Scan Active",
+            futureLabel: "Waiting for Smart Scan",
+            source_type: "mediasync",
+            source_name: libraryScan?.source_name || libraryScan?.activity_library_name || "Library",
+            event: scanAfterImport ? libraryScan : imported,
+            complete: scanIsComplete,
+            active: scanIsActive,
+        }),
+        lifecycleStage({
+            id: "available",
+            completeLabel: `Available in ${mediaServerLabelText}`,
+            activeLabel: `Waiting for ${mediaServerLabelText}`,
+            futureLabel: `Waiting for ${mediaServerLabelText}`,
+            source_type: mediaServerType || available?.source_type || "media_server",
+            source_name: mediaServerLabelText,
+            event: availableAfterScan ? available : null,
+            complete: availableAfterScan,
+            active: false,
+        }),
+    );
+
+    return stages;
+}
+
+function lifecycleStage(config) {
+    let state = "future";
+    let label = config.futureLabel;
+
+    if (config.failed) {
+        state = "failed";
+        label = config.completeLabel;
+    } else if (config.cancelled) {
+        state = "cancelled";
+        label = config.completeLabel;
+    } else if (config.complete) {
+        state = "complete";
+        label = config.completeLabel;
+    } else if (config.active) {
+        state = "active";
+        label = config.activeLabel;
+    }
+
+    return {
+        ...config,
+        state,
+        label,
+        stage: label,
+        title: label,
+        source_type: config.source_type,
+        source_name: config.source_name,
+        created_at: config.event?.created_at || "",
+        details: config.event?.details || "",
+        activity_library_name: config.event?.activity_library_name || config.event?.details || "",
+        activity_library_image_url: config.event?.activity_library_image_url || "",
+        status: state === "active" ? "active" : (state === "failed" ? "error" : "success"),
+        original_event: config.event || null,
+    };
+}
+
+function lifecycleArrType(events, lifecycle) {
+    if (events.some((event) => event.source_type === "sonarr")) {
+        return "sonarr";
+    }
+
+    if (events.some((event) => event.source_type === "radarr")) {
+        return "radarr";
+    }
+
+    const mediaType = String(lifecycle.media_type || "").toLowerCase();
+
+    if (["tv", "series", "show", "tvshows"].includes(mediaType)) {
+        return "sonarr";
+    }
+
+    return "radarr";
+}
+
+function lifecycleArrLabel(events, arrType) {
+    const arrEvent = events.find((event) => event.source_type === arrType);
+
+    if (arrEvent && arrEvent.source_name) {
+        return arrEvent.source_name;
+    }
+
+    return lifecycleSourceLabel(arrType);
+}
+
+function firstLifecycleEvent(events, kinds) {
+    return events.find((event) => kinds.includes(event.kind));
+}
+
+function latestLifecycleEvent(events, kinds) {
+    return [...events]
+        .filter((event) => kinds.includes(event.kind))
+        .sort((a, b) => lifecycleEventTimestamp(b) - lifecycleEventTimestamp(a))[0] || null;
+}
+
+function latestOfLifecycleEvents(items) {
+    return items
+        .filter(Boolean)
+        .sort((a, b) => lifecycleEventTimestamp(b) - lifecycleEventTimestamp(a))[0] || null;
+}
+
+function lifecycleEventTimestamp(event) {
+    if (!event) {
+        return 0;
+    }
+
+    const parsed = Date.parse(event.created_at || event.updated_at || "");
+
+    if (Number.isFinite(parsed)) {
+        return parsed;
+    }
+
+    return 0;
+}
+
+function lifecycleEventIsSameOrAfter(candidate, reference) {
+    if (!candidate) {
+        return false;
+    }
+
+    if (!reference) {
+        return true;
+    }
+
+    return lifecycleEventTimestamp(candidate) >= lifecycleEventTimestamp(reference);
+}
+
+function lifecycleEventIsAfter(candidate, reference) {
+    if (!candidate) {
+        return false;
+    }
+
+    if (!reference) {
+        return true;
+    }
+
+    return lifecycleEventTimestamp(candidate) > lifecycleEventTimestamp(reference);
+}
+
+function availableIsCurrentForSequence(available, downloadStarted) {
+    return Boolean(available && (!downloadStarted || lifecycleEventIsAfter(available, downloadStarted)));
+}
+
+function renderLifecycleTimeline(events, popupType = "movie") {
+    if (!events.length) {
+        return `<div class="lifecycle-empty">No lifecycle stages yet.</div>`;
+    }
+
+    return events.map((event) => {
+        const stateClass = event.state || "future";
+        const icon = lifecycleIconMarkup(event);
+        const sourceLabel = event.source_name || lifecycleSourceLabel(event.source_type);
+        const stage = event.label || event.stage || event.title || "Lifecycle stage";
+        const detail = event.details || "";
+        const time = event.created_at ? formatLifecycleTime(event.created_at) : "";
+
+        return `
+            <div class="lifecycle-timeline-row ${stateClass}" data-lifecycle-timeline-row data-timeline-stage="${escapeHtml(stage)}">
+                <div class="lifecycle-timeline-rail">
+                    <div class="lifecycle-state-token"><span>${stateTokenSymbol(stateClass)}</span></div>
+                    <div class="lifecycle-timeline-icon">${icon}</div>
+                </div>
+                <div class="lifecycle-timeline-content">
+                    <div class="lifecycle-timeline-topline">
+                        <div class="lifecycle-timeline-stage">${escapeHtml(stage)}</div>
+                        <div class="lifecycle-timeline-time">${escapeHtml(time)}</div>
+                    </div>
+                    <div class="lifecycle-timeline-source">${escapeHtml(sourceLabel)}</div>
+                    ${detail ? `<div class="lifecycle-timeline-detail">${escapeHtml(detail)}</div>` : ""}
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+function lifecycleTimelineState(event, index, total) {
+    return event.state || "future";
+}
+
+function stateTokenSymbol(stateClass) {
+    if (stateClass === "failed") {
+        return "!";
+    }
+
+    if (stateClass === "cancelled") {
+        return "×";
+    }
+
+    if (stateClass === "active") {
+        return "◉";
+    }
+
+    if (stateClass === "future") {
+        return "";
+    }
+
+    return "✓";
+}
+
+function renderCurrentLifecycleActivity(events, mediaServer, popupType = "movie", lifecycle = {}, tvOverview = null) {
+    if (!events.length) {
+        return `<div class="lifecycle-current-empty">Waiting for activity.</div>`;
+    }
+
+    if (popupType === "tv") {
+        return renderTvCurrentLifecycleActivity(events, mediaServer, lifecycle, tvOverview);
+    }
+
+    const current = currentLifecycleStage(events);
+    return renderStaticCurrentActivity(current, mediaServer, lifecycle);
+}
+
+function renderTvCurrentLifecycleActivity(events, mediaServer, lifecycle = {}, tvOverview = null, activeDownload = null) {
+    const cards = [];
+
+    const downloadingStage = events.find((stage) => stage.id === "download" && stage.state === "active");
+    const importingStage = events.find((stage) => stage.id === "import" && stage.state === "active");
+    const scanStage = events.find((stage) => stage.id === "scan" && stage.state === "active");
+    const availableStage = events.find((stage) => stage.id === "available" && stage.state === "complete");
+
+    if (activeDownload || downloadingStage) {
+        cards.push(renderTvCurrentDownloadingCard(activeDownload, downloadingStage));
+    }
+
+    if (importingStage) {
+        cards.push(renderTvCurrentSimpleCard(importingStage, "Importing", "Importing"));
+    }
+
+    if (scanStage) {
+        cards.push(renderTvCurrentSimpleCard(scanStage, scanStage.label || "Smart Scan", smartScanDetail(scanStage)));
+    }
+
+    if (!cards.length && availableStage) {
+        cards.push(renderTvAvailableCurrentCard(availableStage, mediaServer, tvOverview));
+    }
+
+    if (!cards.length) {
+        return `<div class="lifecycle-current-empty">Waiting for active TV activity.</div>`;
+    }
+
+    return `<div class="lifecycle-tv-current-stack">${cards.join("")}</div>`;
+}
+
+function renderTvCurrentDownloadingCard(download, stage) {
+    if (download) {
+        const percent = Number(download.percent || 0);
+        const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
+        const itemName = download.name || download.filename || stage?.source_name || "Download";
+        const icon = lifecycleIconMarkup({ source_type: download.downloader_type || "sabnzbd", source_name: download.downloader_name || "SABnzbd" });
+
+        return `
+            <div class="lifecycle-tv-current-card downloading">
+                <div class="lifecycle-tv-current-title-row">
+                    <div class="lifecycle-current-icon">${icon}</div>
+                    <div>
+                        <div class="lifecycle-current-title">Downloading</div>
+                        <div class="lifecycle-current-meta">${escapeHtml(itemName)}</div>
+                    </div>
+                    <strong>${safePercent}%</strong>
+                </div>
+                <div class="lifecycle-tv-current-progress"><span style="width:${safePercent}%"></span></div>
+                <div class="lifecycle-tv-current-subline">${escapeHtml(download.downloader_name || "Downloader")} ${download.speed ? `• ${escapeHtml(download.speed)}` : ""}${(download.eta || download.queue_timeleft) ? ` • ETA: ${escapeHtml(download.eta || download.queue_timeleft)}` : ""}</div>
+            </div>
+        `;
+    }
+
+    return renderTvCurrentSimpleCard(stage, "Downloading", "Active download in progress");
+}
+
+function renderTvCurrentSimpleCard(stage, title, detail) {
+    const state = String(stage?.state || "active").toLowerCase();
+    const icon = lifecycleIconMarkup(stage || { source_type: "mediasync", source_name: "MediaSync" });
+
+    return `
+        <div class="lifecycle-tv-current-card ${escapeHtml(stage?.id || state)}">
+            <div class="lifecycle-tv-current-title-row">
+                <div class="lifecycle-current-icon">${icon}</div>
+                <div>
+                    <div class="lifecycle-current-title">${escapeHtml(title || stage?.label || "Current Activity")}</div>
+                    <div class="lifecycle-current-meta">${escapeHtml(stage?.source_name || lifecycleSourceLabel(stage?.source_type))}</div>
+                    <div class="lifecycle-current-state ${escapeHtml(state)}">${escapeHtml(detail || "Active")}</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderTvAvailableCurrentCard(stage, mediaServer, tvOverview) {
+    const series = tvOverview && tvOverview.series ? tvOverview.series : {};
+    const percent = Number(series.percent_available || 0);
+    const count = series.count_label || `${series.episodes_available || 0} / ${series.episodes_total || 0} Episodes`;
+    const title = stage?.label || `Available in ${mediaServerLabel((mediaServer || {}).server_type) || "Media Server"}`;
+
+    return `
+        <div class="lifecycle-tv-current-card available">
+            <div class="lifecycle-tv-current-title-row">
+                <div class="lifecycle-current-icon">${lifecycleIconMarkup(stage)}</div>
+                <div>
+                    <div class="lifecycle-current-title">${escapeHtml(title)}</div>
+                    <div class="lifecycle-current-meta">${escapeHtml(count)}</div>
+                    <div class="lifecycle-current-state complete">${escapeHtml(percent)}% Available</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function smartScanDetail(stage) {
+    const text = String(stage?.original_event?.stage || stage?.original_event?.event_type || stage?.label || "").toLowerCase();
+
+    if (text.includes("interim")) {
+        return "Interim scan running";
+    }
+
+    if (text.includes("final")) {
+        return "Final scan running";
+    }
+
+    if (text.includes("queue")) {
+        return "Monitoring Sonarr queue";
+    }
+
+    return "Monitoring Sonarr Queue";
+}
+
+function currentLifecycleStage(stages) {
+    const active = stages.find((stage) => stage.state === "active");
+
+    if (active) {
+        return active;
+    }
+
+    const terminal = [...stages].reverse().find((stage) => ["failed", "cancelled"].includes(stage.state));
+
+    if (terminal) {
+        return terminal;
+    }
+
+    return [...stages].reverse().find((stage) => stage.state === "complete") || stages[0];
+}
+
+function renderStaticCurrentActivity(current, mediaServer, lifecycle = {}) {
+    const icon = lifecycleIconMarkup(current);
+    const mediaServerType = mediaServerLabel(mediaServer.server_type);
+    const title = current.label || current.stage || current.title || "Current activity";
+    const state = String(current.state || current.status || "success").toLowerCase();
+    const statusLabel = state === "active" ? "In Progress" : (state === "future" ? "Waiting" : (state === "cancelled" ? "Cancelled" : (state === "failed" ? "Failed" : "Completed")));
+
+    return `
+        <div class="lifecycle-current-header-row">
+            <div class="lifecycle-current-main">
+                <div class="lifecycle-current-icon">${icon}</div>
+                <div>
+                    <div class="lifecycle-current-title">${escapeHtml(title)}</div>
+                    <div class="lifecycle-current-meta">${escapeHtml(current.source_name || lifecycleSourceLabel(current.source_type))}</div>
+                    <div class="lifecycle-current-state ${escapeHtml(state)}">${escapeHtml(statusLabel)}</div>
+                </div>
+            </div>
+        </div>
+        <div class="lifecycle-current-stat-list">
+            ${current.details ? lifecycleCurrentStat("Details", current.details) : ""}
+            ${current.activity_library_name ? lifecycleCurrentStat("Library", current.activity_library_name) : ""}
+            ${mediaServerType ? lifecycleCurrentStat("Media Server", mediaServerType) : ""}
+            ${current.created_at ? lifecycleCurrentStat("Updated", formatLifecycleTime(current.created_at)) : ""}
+        </div>
+    `;
+}
+
+function lifecycleCurrentStat(label, value) {
+    if (!value) {
+        return "";
+    }
+
+    return `
+        <div class="lifecycle-current-stat">
+            <span>${escapeHtml(label)}</span>
+            <strong>${escapeHtml(value)}</strong>
+        </div>
+    `;
+}
+
+function startLifecycleCurrentPolling() {
+    stopLifecycleCurrentPolling();
+
+    if (!LIFECYCLE_CURRENT_DATA) {
+        return;
+    }
+
+    refreshLifecycleCurrentActivity();
+    LIFECYCLE_CURRENT_POLL_TIMER = window.setInterval(refreshLifecycleCurrentActivity, 1000);
+}
+
+function stopLifecycleCurrentPolling() {
+    if (!LIFECYCLE_CURRENT_POLL_TIMER) {
+        return;
+    }
+
+    window.clearInterval(LIFECYCLE_CURRENT_POLL_TIMER);
+    LIFECYCLE_CURRENT_POLL_TIMER = null;
+}
+
+async function refreshLifecycleCurrentActivity() {
+    if (!LIFECYCLE_CURRENT_DATA) {
+        stopLifecycleCurrentPolling();
+        return;
+    }
+
+    let result;
+
+    try {
+        const response = await fetch("/api/downloaders/queue/all", { headers: { "Accept": "application/json" } });
+        result = await response.json();
+    } catch (error) {
+        return;
+    }
+
+    const currentCard = document.querySelector("[data-lifecycle-current-card]");
+
+    if (!currentCard) {
+        stopLifecycleCurrentPolling();
+        return;
+    }
+
+    const activeDownload = findLifecycleActiveDownload(result, LIFECYCLE_CURRENT_DATA.lifecycle, LIFECYCLE_CURRENT_DATA.tvOverview);
+
+    if (LIFECYCLE_CURRENT_DATA.popupType === "tv") {
+        try {
+            const lifecycleId = LIFECYCLE_CURRENT_DATA.lifecycle?.id;
+
+            if (lifecycleId) {
+                const response = await fetch(`/api/lifecycle/${encodeURIComponent(lifecycleId)}`, {
+                    headers: { "Accept": "application/json" },
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    const lifecycle = data.lifecycle || LIFECYCLE_CURRENT_DATA.lifecycle;
+                    const rawEvents = Array.isArray(data.events) ? data.events : [];
+                    const mediaServer = data.media_server || LIFECYCLE_CURRENT_DATA.mediaServer || {};
+                    const tvOverview = data.tv_overview || LIFECYCLE_CURRENT_DATA.tvOverview || null;
+                    const visibleEvents = normalizeVisibleLifecycleEvents(rawEvents, lifecycle, mediaServer, tvOverview);
+
+                    LIFECYCLE_CURRENT_DATA = {
+                        lifecycle,
+                        events: visibleEvents,
+                        mediaServer,
+                        popupType: "tv",
+                        tvOverview,
+                    };
+
+                    const timeline = document.querySelector("[data-lifecycle-timeline]");
+                    if (timeline) {
+                        timeline.innerHTML = renderLifecycleTimeline(visibleEvents, "tv");
+                    }
+
+                    const leftPanel = document.querySelector(".lifecycle-detail-left");
+                    if (leftPanel) {
+                        const origin = lifecycleOriginInfo(lifecycle, rawEvents);
+                        leftPanel.innerHTML = renderLifecycleMetadataPanel(lifecycle, tvOverview, "tv", origin.isRequestOrigin, origin);
+                    }
+
+                    const expandedSeasons = Array.from(document.querySelectorAll(".lifecycle-season-row.expanded"))
+                        .map((row) => row.dataset.seasonNumber)
+                        .filter(Boolean);
+
+                    const seasonOverview = document.querySelector(".lifecycle-tv-overview");
+                    if (seasonOverview) {
+                        seasonOverview.outerHTML = renderTvSeasonOverview(tvOverview);
+
+                        expandedSeasons.forEach((seasonNumber) => {
+                            const row = document.querySelector(`.lifecycle-season-row[data-season-number="${cssEscape(String(seasonNumber))}"]`);
+                            if (row) {
+                                row.classList.add("expanded");
+                            }
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            // Keep existing TV popup content if a live overview refresh fails.
+        }
+
+        currentCard.innerHTML = renderTvCurrentLifecycleActivity(
+            LIFECYCLE_CURRENT_DATA.events,
+            LIFECYCLE_CURRENT_DATA.mediaServer,
+            LIFECYCLE_CURRENT_DATA.lifecycle,
+            LIFECYCLE_CURRENT_DATA.tvOverview,
+            activeDownload,
+        );
+
+        const availableStage = LIFECYCLE_CURRENT_DATA.events.find((stage) => stage.id === "available" && stage.state === "complete");
+
+        if (!activeDownload && availableStage) {
+            stopLifecycleCurrentPolling();
+        }
+
+        return;
+    }
+
+    try {
+        const lifecycleId = LIFECYCLE_CURRENT_DATA.lifecycle?.id;
+
+        if (lifecycleId) {
+            const response = await fetch(`/api/lifecycle/${encodeURIComponent(lifecycleId)}`, {
+                headers: { "Accept": "application/json" },
+            });
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                const lifecycle = data.lifecycle || LIFECYCLE_CURRENT_DATA.lifecycle;
+                const rawEvents = Array.isArray(data.events) ? data.events : [];
+                const mediaServer = data.media_server || LIFECYCLE_CURRENT_DATA.mediaServer || {};
+                const visibleEvents = normalizeVisibleLifecycleEvents(rawEvents, lifecycle, mediaServer, null);
+
+                LIFECYCLE_CURRENT_DATA = {
+                    lifecycle,
+                    events: visibleEvents,
+                    mediaServer,
+                    popupType: LIFECYCLE_CURRENT_DATA.popupType,
+                    tvOverview: null,
+                    displayTitle: LIFECYCLE_CURRENT_DATA.displayTitle || "",
+                };
+
+                const timeline = document.querySelector("[data-lifecycle-timeline]");
+                if (timeline) {
+                    timeline.innerHTML = renderLifecycleTimeline(visibleEvents, LIFECYCLE_CURRENT_DATA.popupType);
+                }
+            }
+        }
+    } catch (error) {
+        // Keep current movie popup data if refresh fails.
+    }
+
+    if (activeDownload) {
+        currentCard.innerHTML = renderDownloadingCurrentActivity(activeDownload);
+        return;
+    }
+
+    currentCard.innerHTML = renderCurrentLifecycleActivity(
+        LIFECYCLE_CURRENT_DATA.events,
+        LIFECYCLE_CURRENT_DATA.mediaServer,
+        LIFECYCLE_CURRENT_DATA.popupType,
+        LIFECYCLE_CURRENT_DATA.lifecycle,
+    );
+
+    const terminalStage = LIFECYCLE_CURRENT_DATA.events.find((stage) =>
+        (stage.id === "available" && stage.state === "complete") ||
+        stage.state === "failed" ||
+        stage.state === "cancelled"
+    );
+
+    if (terminalStage) {
+        stopLifecycleCurrentPolling();
+    }
+}
+
+function findLifecycleActiveDownload(result, lifecycle, tvOverview = null) {
+    const queues = result && Array.isArray(result.queues) ? result.queues : [];
+    const lookupTerms = new Set();
+
+    const title = normalizeLookupText(lifecycle.title || "");
+    if (title) {
+        lookupTerms.add(title);
+    }
+
+    ((tvOverview || {}).seasons || []).forEach((season) => {
+        (season.episodes || []).forEach((episode) => {
+            if (episode.status !== "downloading") {
+                return;
+            }
+
+            const code = normalizeLookupText(episode.episode_code || "");
+            const episodeTitle = normalizeLookupText(episode.title || "");
+            const combined = normalizeLookupText(`${lifecycle.title || ""} ${episode.episode_code || ""}`);
+
+            if (code) {
+                lookupTerms.add(code);
+            }
+
+            if (episodeTitle) {
+                lookupTerms.add(episodeTitle);
+            }
+
+            if (combined) {
+                lookupTerms.add(combined);
+            }
+        });
+    });
+
+    if (!lookupTerms.size) {
+        return null;
+    }
+
+    for (const queue of queues) {
+        const downloads = Array.isArray(queue.downloads) ? queue.downloads : [];
+
+        for (const download of downloads) {
+            const name = normalizeLookupText(download.name || download.filename || "");
+
+            if (!name) {
+                continue;
+            }
+
+            for (const term of lookupTerms) {
+                if (!term) {
+                    continue;
+                }
+
+                if (name.includes(term) || term.includes(name)) {
+                    return {
+                        ...download,
+                        queue,
+                        downloader_name: queue.downloader_name || queue.source || "SABnzbd",
+                        downloader_type: queue.downloader_type || "sabnzbd",
+                        speed: queue.speed || "",
+                        queue_timeleft: queue.timeleft || "",
+                    };
+                }
+            }
+        }
+    }
+
+    return null;
+}
+
+function renderDownloadingCurrentActivity(download) {
+    const percent = Number(download.percent || 0);
+    const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
+    const icon = lifecycleIconMarkup({ source_type: download.downloader_type || "sabnzbd", source_name: download.downloader_name || "SABnzbd" });
+    const downloaded = download.size && download.remaining ? `${download.remaining} left of ${download.size}` : (download.size || "");
+    const itemName = download.name || download.filename || "Download";
+
+    return `
+        <div class="lifecycle-current-header-row downloading">
+            <div class="lifecycle-current-progress-first">
+                ${progressRingMarkup(safePercent)}
+            </div>
+            <div class="lifecycle-current-main centered">
+                <div class="lifecycle-current-icon large">${icon}</div>
+                <div>
+                    <div class="lifecycle-current-title">Downloading</div>
+                    <div class="lifecycle-current-meta">${escapeHtml(itemName)}</div>
+                    <div class="lifecycle-current-state active">In Progress</div>
+                </div>
+            </div>
+        </div>
+        <div class="lifecycle-current-stat-list">
+            ${lifecycleCurrentStat("Downloaded", downloaded || "—")}
+            ${lifecycleCurrentStat("Download Rate", download.speed || "—")}
+            ${lifecycleCurrentStat("ETA", download.eta || download.queue_timeleft || "—")}
+            ${lifecycleCurrentStat("Category", download.category || "—")}
+            ${lifecycleCurrentStat("Priority", download.priority || "—")}
+            ${lifecycleCurrentStat("Path", download.filename || download.name || "—")}
+        </div>
+        <div class="lifecycle-current-note">This item is currently downloading. Progress will update automatically.</div>
+    `;
+}
+
+function progressRingMarkup(percent) {
+    const degrees = Math.round((percent / 100) * 360);
+
+    return `
+        <div class="lifecycle-progress-ring" style="--progress-deg:${degrees}deg">
+            <div class="lifecycle-progress-ring-inner">${escapeHtml(String(percent))}%</div>
+        </div>
+    `;
+}
+
+function normalizeLookupText(value) {
+    return String(value || "")
+        .toLowerCase()
+        .replace(/\(\d{4}\)/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+}
+
+function renderTvSeasonOverview(tvOverview) {
+    if (!tvOverview || !tvOverview.success) {
+        return `
+            <section class="lifecycle-tv-overview lifecycle-side-card wide">
+                <div class="lifecycle-section-title">Season Overview</div>
+                <div class="lifecycle-current-empty">${escapeHtml(tvOverview && tvOverview.message ? tvOverview.message : "Sonarr season data is not available yet.")}</div>
+            </section>
+        `;
+    }
+
+    const seasons = Array.isArray(tvOverview.seasons) ? tvOverview.seasons : [];
+
+    if (!seasons.length) {
+        return `
+            <section class="lifecycle-tv-overview lifecycle-side-card wide">
+                <div class="lifecycle-section-title">Season Overview</div>
+                <div class="lifecycle-current-empty">No monitored seasons found in Sonarr.</div>
+            </section>
+        `;
+    }
+
+    return `
+        <section class="lifecycle-tv-overview lifecycle-side-card wide">
+            <div class="lifecycle-tv-overview-header">
+                <div class="lifecycle-section-title">Season Overview</div>
+                <span>Availability based on monitored episodes only</span>
+            </div>
+            <div class="lifecycle-tv-season-list">
+                ${seasons.map(renderTvSeason).join("")}
+            </div>
+            <div class="lifecycle-tv-footnote">Seasons are ordered from newest to oldest.</div>
+        </section>
+    `;
+}
+
+function renderTvSeason(season) {
+    const episodes = Array.isArray(season.episodes) ? season.episodes : [];
+    const percent = Number(season.percent_available ?? season.progress ?? 0);
+    const countLabel = season.count_label || `${season.available_count || 0} / ${season.total_count || 0} Episodes`;
+    const statusLabel = season.status_label || (season.is_complete ? "Available" : "Scheduled");
+
+    if (season.is_complete || !season.is_expandable) {
+        return `
+            <div class="lifecycle-tv-season-row complete ${escapeHtml(season.status || "available")}">
+                <div class="lifecycle-tv-season-toggle-spacer"></div>
+                <strong>${escapeHtml(season.label || `Season ${season.season_number}`)}</strong>
+                <span class="lifecycle-tv-status-pill ${escapeHtml(season.status || "available")}">${escapeHtml(statusLabel)}</span>
+                <div class="lifecycle-tv-season-progress">
+                    <div class="lifecycle-tv-progress-bar"><span style="width:${escapeHtml(String(percent))}%"></span></div>
+                </div>
+                <span>${escapeHtml(countLabel)}</span>
+                <span>${escapeHtml(String(percent))}% Available</span>
+            </div>
+        `;
+    }
+
+    const expanded = tvSeasonShouldOpen(season) ? " open" : "";
+
+    return `
+        <details class="lifecycle-tv-season-row-wrap" data-season-number="${escapeHtml(String(season.season_number || ""))}"${expanded}>
+            <summary class="lifecycle-tv-season-row ${escapeHtml(season.status || "scheduled")}">
+                <span class="lifecycle-tv-season-chevron">›</span>
+                <strong>${escapeHtml(season.label || `Season ${season.season_number}`)}</strong>
+                <span class="lifecycle-tv-status-pill ${escapeHtml(season.status || "scheduled")}">${escapeHtml(statusLabel)}</span>
+                <div class="lifecycle-tv-season-progress">
+                    <div class="lifecycle-tv-progress-bar"><span style="width:${escapeHtml(String(percent))}%"></span></div>
+                </div>
+                <span>${escapeHtml(countLabel)}</span>
+                <span>${escapeHtml(String(percent))}% Available</span>
+            </summary>
+            <div class="lifecycle-tv-episode-table">
+                ${episodes.map(renderTvEpisode).join("")}
+            </div>
+        </details>
+    `;
+}
+
+function renderTvEpisode(episode) {
+    const status = episode.status || "future";
+    const symbol = status === "available" ? "✓" : (status === "downloading" ? "◉" : "○");
+
+    return `
+        <div class="lifecycle-tv-episode-row ${escapeHtml(status)}">
+            <span class="lifecycle-tv-episode-indicator">${symbol}</span>
+            <span>${escapeHtml(episode.episode_code || "")}</span>
+            <strong>${escapeHtml(episode.title || "Episode")}</strong>
+            <em>${escapeHtml(episode.status_label || "")}</em>
+        </div>
+    `;
+}
+
+function monitoredSeasonLabel(seasons) {
+    if (!Array.isArray(seasons) || !seasons.length) {
+        return "—";
+    }
+
+    if (seasons.length === 1) {
+        return `Season ${seasons[0]} Requested`;
+    }
+
+    const sorted = seasons.map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+    const contiguous = sorted.every((value, index) => index === 0 || value === sorted[index - 1] + 1);
+
+    if (contiguous) {
+        return `Seasons ${sorted[0]}-${sorted[sorted.length - 1]} Requested`;
+    }
+
+    return `Seasons ${sorted.join(", ")} Requested`;
+}
+
+function lifecycleYear(title, createdAt) {
+    const match = String(title || "").match(/\((\d{4})\)/);
+
+    if (match) {
+        return match[1];
+    }
+
+    if (createdAt) {
+        return String(createdAt).slice(0, 4);
+    }
+
+    return "—";
+}
+
+function formatLifecycleTime(value) {
+    if (!value) {
+        return "—";
+    }
+
+    const raw = String(value).replace(" ", "T");
+    const parsed = new Date(raw.endsWith("Z") ? raw : `${raw}Z`);
+
+    if (Number.isNaN(parsed.getTime())) {
+        return String(value);
+    }
+
+    return parsed.toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    });
+}
+
+function mediaServerLabel(serverType) {
+    const labels = {
+        emby: "Emby",
+        jellyfin: "Jellyfin",
+        plex: "Plex",
+    };
+
+    return labels[String(serverType || "").toLowerCase()] || "";
+}
+
+function lifecycleIconMarkup(eventOrSourceType, sourceName) {
+    const event = typeof eventOrSourceType === "object" && eventOrSourceType !== null
+        ? eventOrSourceType
+        : { source_type: eventOrSourceType, source_name: sourceName };
+
+    const file = lifecycleIconFile(event);
+    const label = event.source_name || lifecycleSourceLabel(event.source_type);
+
+    if (!file) {
+        return `<span>${escapeHtml(lifecycleFallbackIcon(event.source_type))}</span>`;
+    }
+
+    return `<img src="${escapeHtml(file)}" alt="${escapeHtml(label)}" onerror="this.style.display='none'; this.parentElement.textContent='${escapeHtml(lifecycleFallbackIcon(event.source_type))}';">`;
+}
+
+function lifecycleIconFile(event) {
+    const normalizedType = String(event.source_type || "").toLowerCase();
+    const normalizedName = String(event.source_name || "").toLowerCase();
+
+    if (normalizedType === "mediasync" && event.activity_library_image_url) {
+        return event.activity_library_image_url;
+    }
+
+    if (normalizedType === "sabnzbd" || normalizedName.includes("sab")) {
+        return "/static/img/sab-logo.png";
+    }
+
+    if (normalizedType === "radarr" || normalizedName.includes("radarr")) {
+        return "/static/img/radarr-logo.png";
+    }
+
+    if (normalizedType === "sonarr" || normalizedName.includes("sonarr")) {
+        return "/static/img/sonarr-logo.png";
+    }
+
+    if (normalizedType === "seerr" || normalizedName.includes("seerr")) {
+        return "/static/img/seerr-logo.png";
+    }
+
+    if (normalizedType === "emby") {
+        return "/static/img/emby-logo.png";
+    }
+
+    if (normalizedType === "jellyfin") {
+        return "/static/img/jellyfin-logo.png";
+    }
+
+    if (normalizedType === "plex") {
+        return "/static/img/plex-logo.png";
+    }
+
+    if (normalizedType === "mediasync") {
+        return "/static/img/default.png";
+    }
+
+    return "/static/img/default.png";
+}
+
+function lifecycleSourceLabel(sourceType) {
+    const labels = {
+        seerr: "Seerr",
+        radarr: "Radarr",
+        sonarr: "Sonarr",
+        sabnzbd: "SABnzbd",
+        emby: "Emby",
+        jellyfin: "Jellyfin",
+        plex: "Plex",
+        mediasync: "MediaSync",
+    };
+
+    return labels[String(sourceType || "").toLowerCase()] || "MediaSync";
+}
+
+function lifecycleFallbackIcon(sourceType) {
+    const normalized = String(sourceType || "").toLowerCase();
+
+    if (normalized === "sabnzbd") {
+        return "⇩";
+    }
+
+    if (normalized === "radarr" || normalized === "sonarr") {
+        return "⚙";
+    }
+
+    if (normalized === "emby" || normalized === "jellyfin" || normalized === "plex") {
+        return "▶";
+    }
+
+    if (normalized === "seerr") {
+        return "★";
+    }
+
+    return "✓";
 }
 
 function escapeHtml(value) {
