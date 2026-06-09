@@ -47,7 +47,7 @@ Features include:
 
 ### Movie Progress Tracking
 
-![Movie Progress](app/static/img/screenshots/movie-progress.png)
+![Movie Progress](app/static/img/screenshots/movie_download.png)
 
 Track a movie through the entire media pipeline:
 
@@ -76,7 +76,7 @@ The movie progress window provides:
 
 ### TV Progress Tracking
 
-![TV Progress](app/static/img/screenshots/tv-progress.png)
+![TV Progress](app/static/img/screenshots/tv_download.png)
 
 Track TV episodes through the media pipeline:
 
