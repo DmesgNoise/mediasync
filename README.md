@@ -8,13 +8,11 @@
 <h1 align="center">MediaSync</h1>
 
 <p align="center">
-  <strong>Media Server Automation and Visibility</strong>
+  <strong>Media Pipeline Visibility and Automation</strong>
 </p>
 
 <p align="center">
-  MediaSync connects Seerr, Radarr, Sonarr, SABnzbd, and your media server into a single dashboard.
-  Track requests from download to availability, monitor the health of your media stack, and automatically
-  keep Emby, Jellyfin, and Plex libraries in sync.
+  MediaSync connects your request application, download client, media automation stack, and media server into a single dashboard. Track content from request through download, import, scan, and availability while monitoring the health of your media ecosystem from one place.
 </p>
 
 <p align="center">
@@ -22,8 +20,18 @@
   <strong>Download Visibility</strong> •
   <strong>Service Health Monitoring</strong> •
   <strong>Smart TV Sync</strong> •
-  <strong>Emby / Jellyfin / Plex</strong>
+  <strong>Multiple Instance Support</strong>
 </p>
+
+---
+
+## Why MediaSync?
+
+Modern media stacks are made up of multiple independent applications.
+
+Requests, downloads, imports, scans, and media server availability are often spread across several dashboards.
+
+MediaSync brings the entire process together into a single view, providing visibility from request through availability.
 
 ---
 
@@ -33,28 +41,27 @@
 
 ![Dashboard](app/static/img/screenshots/dashboard.png)
 
-The dashboard gives you a live view of your media stack.
+The dashboard provides a live view of your media ecosystem.
 
 Features include:
 
 - Service health monitoring
-- Request visibility
-- Queue visibility
-- Download activity
-- Library counts
+- Request tracking
+- Download visibility
+- Library statistics
+- Availability tracking
 - Recent activity
-- Manual scan controls
+- Connected service status
 
 ### Movie Progress Tracking
 
 ![Movie Progress](app/static/img/screenshots/movie_download.png)
 
-Track a movie through the entire media pipeline:
+Track a movie from request through availability:
 
-```text
 Requested
 ↓
-Sent to Radarr
+Sent to Media Automation
 ↓
 Downloading
 ↓
@@ -62,8 +69,7 @@ Imported
 ↓
 Library Scan
 ↓
-Available in Emby
-```
+Available
 
 The movie progress window provides:
 
@@ -78,12 +84,11 @@ The movie progress window provides:
 
 ![TV Progress](app/static/img/screenshots/tv_download.png)
 
-Track TV episodes through the media pipeline:
+Track TV episodes from request through availability:
 
-```text
 Requested
 ↓
-Sent to Sonarr
+Sent to Media Automation
 ↓
 Downloading
 ↓
@@ -91,8 +96,7 @@ Imported
 ↓
 Smart Scan
 ↓
-Available in Emby
-```
+Available
 
 The TV progress window provides:
 
@@ -109,25 +113,27 @@ The TV progress window provides:
 
 ### Request Tracking
 
-MediaSync tracks requests from Seerr all the way through download, import, scan, and availability.
+MediaSync tracks requests from creation through download, import, scan, and availability.
 
 ### Download Visibility
 
-Monitor SABnzbd activity directly from MediaSync, including live progress percentages and download status.
+Monitor supported download clients directly from MediaSync, including live progress percentages, status, speed, and download activity.
+
+### Availability Confirmation
+
+MediaSync verifies that content is actually available in your media server before reporting completion.
 
 ### Immediate Movie Scans
 
 Movie imports trigger immediate library scans so new content appears quickly.
 
-MediaSync verifies that content is actually available in your media server before reporting completion.
-
 ### Queue Aware TV Synchronization
 
 TV imports are handled differently than movies.
 
-MediaSync performs an immediate scan on the first import, monitors the Sonarr queue, performs optional interim scans during active download sessions, and executes a final authoritative scan when the queue becomes empty.
+MediaSync performs an immediate scan on the first import, monitors the active queue, performs optional interim scans during active download sessions, and executes a final authoritative scan when the queue becomes empty.
 
-This keeps content available quickly without creating unnecessary scan spam during large download batches.
+This keeps content available quickly without creating unnecessary scan activity during large download batches.
 
 ### Service Health Monitoring
 
@@ -140,27 +146,15 @@ Status indicators include:
 - Configuration Warnings
 - Connection Failures
 
-Supported services:
-
-- Emby
-- Jellyfin
-- Plex
-- Seerr
-- Radarr
-- Sonarr
-- SABnzbd
+### Multiple Instance Support
 
 MediaSync supports multiple instances of supported applications.
+
+Requests, downloads, imports, scans, and availability tracking remain associated with the correct application instance throughout the process.
 
 ### Library Statistics
 
 Monitor library totals directly from the dashboard.
-
-Examples:
-
-- Movies
-- 4K Movies
-- TV Shows
 
 Library counts update automatically after successful scans.
 
@@ -179,7 +173,7 @@ Track events including:
 
 ### Authentication
 
-MediaSync includes first run account setup and session based authentication.
+MediaSync includes first-run account setup and session-based authentication.
 
 ### Progressive Web App
 
@@ -198,11 +192,15 @@ MediaSync can be installed directly to mobile devices and used like a native app
 - Radarr
 - Sonarr
 
-Multiple instances of Radarr and Sonarr are supported.
+Multiple instances are supported.
 
 ### Download Clients
 
 - SABnzbd
+- qBittorrent
+- Transmission
+
+Multiple instances are supported.
 
 ### Media Servers
 
@@ -214,7 +212,7 @@ Multiple instances of Radarr and Sonarr are supported.
 
 ## Deployment
 
-MediaSync is designed to run as a Docker container.
+MediaSync is designed for containerized deployment using Docker and Docker Compose.
 
 Example:
 
@@ -243,21 +241,14 @@ docker compose up -d --build
 
 ---
 
-## Roadmap
+## Future Plans
 
-### MediaSync 2.1
-
-- Unmanic integration
-- Tdarr integration
-- Space savings tracking
-- Transcoding visibility
-
-### Future
-
-- Additional download clients
-- Additional request applications
-- Notifications
-- Analytics
+- Additional Download Clients
+- Unmanic Integration
+- Tdarr Integration
+- Transcoding Visibility
+- Space Savings Tracking
+- Additional Themes and UI Customization
 
 ---
 
