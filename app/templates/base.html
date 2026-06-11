@@ -16,7 +16,7 @@
     <link rel="apple-touch-icon" href="/static/img/default.png">
     <link rel="icon" type="image/png" href="/static/img/default.png">
 
-    <link rel="stylesheet" href="/static/css/app.css?v=2.0.1">
+    <link rel="stylesheet" href="/static/css/app.css?v={{ mediasync_version }}">
 </head>
 
 <body class="theme-{{ media_server['server_type'] if media_server else 'default' }}">
@@ -44,7 +44,7 @@
             <a class="sidebar-logout" href="/logout">Logout</a>
             <div class="status-label">Status</div>
             <div class="status-pill good">Running</div>
-            <div class="status-note">MediaSync v2.0</div>
+            <div class="status-note">MediaSync {{ mediasync_version }}</div>
         </div>
     </aside>
 
@@ -72,9 +72,9 @@
     </div>
 </div>
 
-<script src="/static/js/app.js?v=ui-final3"></script>
-<script src="/static/js/ui-final.js?v=2.0.1"></script>
-<script src="/static/js/request-apps.js?v=2.0.1"></script>
+<script src="/static/js/app.js?v={{ mediasync_version }}"></script>
+<script src="/static/js/ui-final.js?v={{ mediasync_version }}"></script>
+<script src="/static/js/request-apps.js?v={{ mediasync_version }}"></script>
 <script>
     if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {

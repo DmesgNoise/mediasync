@@ -52,6 +52,8 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
+          build-args: |
+            MEDIASYNC_VERSION=${{ github.ref_name }}
           push: true
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}

@@ -56,6 +56,8 @@ app = FastAPI(
 TV_MEDIA_SERVER_EPISODE_CACHE = {}
 TV_MEDIA_SERVER_EPISODE_CACHE_TTL_SECONDS = 15
 
+MEDIASYNC_VERSION = os.getenv("MEDIASYNC_VERSION", "dev")
+
 
 def _get_session_secret():
     env_secret = os.environ.get("MEDIASYNC_SESSION_SECRET", "").strip()
@@ -79,6 +81,8 @@ def _get_session_secret():
 templates = Jinja2Templates(
     directory="app/templates",
 )
+
+templates.env.globals["mediasync_version"] = MEDIASYNC_VERSION
 
 app.mount(
     "/static",

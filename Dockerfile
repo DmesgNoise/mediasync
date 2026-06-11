@@ -9,4 +9,7 @@ COPY . .
 
 EXPOSE 8097
 
+ARG MEDIASYNC_VERSION=dev
+ENV MEDIASYNC_VERSION=${MEDIASYNC_VERSION}
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8097"]
