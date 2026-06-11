@@ -2619,8 +2619,8 @@ function buildLifecycleStageModel(events, lifecycle, mediaServer, tvOverview = n
             completeLabel: downloadCancelled ? "Download Cancelled" : (downloadFailed ? "Download Failed" : "Downloaded"),
             activeLabel: downloadStarted ? "Downloading" : "Waiting for Download",
             futureLabel: "Waiting for Download",
-            source_type: downloadStarted?.source_type || downloadCompleted?.source_type || downloadCancelled?.source_type || downloadFailed?.source_type || "sabnzbd",
-            source_name: downloadStarted?.source_name || downloadCompleted?.source_name || downloadCancelled?.source_name || downloadFailed?.source_name || "SABnzbd",
+            source_type: downloadStarted?.source_type || downloadCompleted?.source_type || downloadCancelled?.source_type || downloadFailed?.source_type || "downloader",
+            source_name: downloadStarted?.source_name || downloadCompleted?.source_name || downloadCancelled?.source_name || downloadFailed?.source_name || "Downloader",
             event: downloadFailed || downloadCancelled || downloadCompleted || downloadStarted,
             complete: Boolean(downloadCompleted || downloadCancelled || downloadFailed || imported || libraryScan || available),
             active: Boolean((grabbed || requested) && !downloadCompleted && !downloadCancelled && !downloadFailed && !imported && !libraryScan && !available),
@@ -2749,8 +2749,8 @@ function buildTvLifecycleStageModel(context) {
             completeLabel: downloadCancelled ? "Download Cancelled" : (downloadFailed ? "Download Failed" : "Downloaded"),
             activeLabel: "Downloading",
             futureLabel: "Waiting for Download",
-            source_type: downloadStarted?.source_type || downloadCompleted?.source_type || downloadCancelled?.source_type || downloadFailed?.source_type || "sabnzbd",
-            source_name: downloadStarted?.source_name || downloadCompleted?.source_name || downloadCancelled?.source_name || downloadFailed?.source_name || "SABnzbd",
+            source_type: downloadStarted?.source_type || downloadCompleted?.source_type || downloadCancelled?.source_type || downloadFailed?.source_type || "downloader",
+            source_name: downloadStarted?.source_name || downloadCompleted?.source_name || downloadCancelled?.source_name || downloadFailed?.source_name || "Downloader",
             event: (downloadFailedIsTerminal ? downloadFailed : null) || (downloadCancelledIsTerminal ? downloadCancelled : null) || downloadTerminal || downloadStarted,
             complete: downloadIsComplete,
             active: downloadIsActive,
@@ -3021,7 +3021,7 @@ function renderTvCurrentDownloadingCard(download, stage) {
         const percent = Number(download.percent || 0);
         const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
         const itemName = download.name || download.filename || stage?.source_name || "Download";
-        const icon = lifecycleIconMarkup({ source_type: download.downloader_type || "sabnzbd", source_name: download.downloader_name || "SABnzbd" });
+        const icon = lifecycleIconMarkup({ source_type: download.downloader_type || "downloader", source_name: download.downloader_name || "Downloader" });
 
         return `
             <div class="lifecycle-tv-current-card downloading">
@@ -3287,6 +3287,18 @@ async function refreshLifecycleCurrentActivity() {
                 const mediaServer = data.media_server || LIFECYCLE_CURRENT_DATA.mediaServer || {};
                 const visibleEvents = normalizeVisibleLifecycleEvents(rawEvents, lifecycle, mediaServer, null);
 
+                if (activeDownload) {
+                    const downloadStage = visibleEvents.find((stage) => stage && stage.id === "download");
+
+                    if (downloadStage) {
+                        downloadStage.state = "active";
+                        downloadStage.label = "Downloading";
+                        downloadStage.source_type = activeDownload.downloader_type || "downloader";
+                        downloadStage.source_name = activeDownload.downloader_name || "Downloader";
+                        downloadStage.event = activeDownload;
+                    }
+                }
+
                 LIFECYCLE_CURRENT_DATA = {
                     lifecycle,
                     events: visibleEvents,
@@ -3385,8 +3397,8 @@ function findLifecycleActiveDownload(result, lifecycle, tvOverview = null) {
                     return {
                         ...download,
                         queue,
-                        downloader_name: queue.downloader_name || queue.source || "SABnzbd",
-                        downloader_type: queue.downloader_type || "sabnzbd",
+                        downloader_name: queue.downloader_name || queue.source || "Downloader",
+                        downloader_type: queue.downloader_type || "downloader",
                         speed: queue.speed || "",
                         queue_timeleft: queue.timeleft || "",
                     };
@@ -3401,7 +3413,7 @@ function findLifecycleActiveDownload(result, lifecycle, tvOverview = null) {
 function renderDownloadingCurrentActivity(download) {
     const percent = Number(download.percent || 0);
     const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
-    const icon = lifecycleIconMarkup({ source_type: download.downloader_type || "sabnzbd", source_name: download.downloader_name || "SABnzbd" });
+    const icon = lifecycleIconMarkup({ source_type: download.downloader_type || "downloader", source_name: download.downloader_name || "Downloader" });
     const downloaded = download.size && download.remaining ? `${download.remaining} left of ${download.size}` : (download.size || "");
     const itemName = download.name || download.filename || "Download";
 
@@ -3630,6 +3642,14 @@ function lifecycleIconFile(event) {
         return "/static/img/sab-logo.png";
     }
 
+    if (normalizedType === "qbittorrent" || normalizedName.includes("qbittorrent") || normalizedName.includes("qbit")) {
+        return "/static/img/qbittorrent-logo.png";
+    }
+
+    if (normalizedType === "transmission" || normalizedName.includes("transmission")) {
+        return "/static/img/transmission-logo.png";
+    }
+
     if (normalizedType === "radarr" || normalizedName.includes("radarr")) {
         return "/static/img/radarr-logo.png";
     }
@@ -3667,6 +3687,8 @@ function lifecycleSourceLabel(sourceType) {
         radarr: "Radarr",
         sonarr: "Sonarr",
         sabnzbd: "SABnzbd",
+        qbittorrent: "qBittorrent",
+        transmission: "Transmission",
         emby: "Emby",
         jellyfin: "Jellyfin",
         plex: "Plex",

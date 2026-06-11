@@ -133,6 +133,7 @@ def _watch_downloaders(watcher_key: str) -> None:
         # from downloader history only.
         if matched_active_downloads:
             active_item = matched_active_downloads[0]
+            downloader_name = active_item.get("_downloader_name") or downloader_name
 
             with WATCHER_LOCK:
                 watcher = ACTIVE_WATCHERS.get(watcher_key)
@@ -278,17 +279,32 @@ def _get_combined_downloader_state(
                 active_downloads.append(item)
 
                 if _download_matches_import(item, import_event, seen_download_ids, seen_download_names):
-                    matched_active_downloads.append(item)
+                    matched_item = dict(item)
+                    matched_item["_downloader_name"] = downloader.get("downloader_name") or "Downloader"
+                    matched_item["_downloader_type"] = downloader.get("downloader_type") or "downloader"
+                    matched_active_downloads.append(matched_item)
+
+                    if not matched_downloader_name:
+                        matched_downloader_name = downloader.get("downloader_name") or "Downloader"
+                        matched_speed = result.get("speed") or ""
+                        matched_timeleft = result.get("timeleft") or ""
+                        matched_size = result.get("size") or ""
 
     if not matched_active_downloads and len(active_downloads) == 1 and not seen_download_ids and not seen_download_names:
         matched_active_downloads = active_downloads[:]
 
+        first_match = matched_active_downloads[0] if matched_active_downloads else {}
+        matched_downloader_name = first_match.get("_downloader_name") or first_downloader_name
+        matched_speed = matched_speed or first_speed
+        matched_timeleft = matched_timeleft or first_timeleft
+        matched_size = matched_size or first_size
+
     return {
         "success": True,
-        "downloader_name": first_downloader_name,
-        "speed": first_speed,
-        "timeleft": first_timeleft,
-        "size": first_size,
+        "downloader_name": matched_downloader_name or first_downloader_name,
+        "speed": matched_speed or first_speed,
+        "timeleft": matched_timeleft or first_timeleft,
+        "size": matched_size or first_size,
         "active_downloads": active_downloads,
         "failed_downloads": failed_downloads,
         "cancelled_downloads": cancelled_downloads,

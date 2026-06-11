@@ -6486,3 +6486,42 @@ body.modal-open {
 .activity-page-event[data-lifecycle-id]:hover::after {
     color: rgba(255, 255, 255, 0.95);
 }
+
+/* Lifecycle popup download text truncation */
+.lifecycle-current-download-name,
+.lifecycle-current-detail-value,
+.lifecycle-current-stat-value {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Lifecycle popup: keep long downloader names/paths inside the side card */
+.lifecycle-current-main,
+.lifecycle-current-main > div {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.lifecycle-current-meta {
+    display: block;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lifecycle-current-stat {
+    min-width: 0;
+}
+
+.lifecycle-current-stat span,
+.lifecycle-current-stat strong {
+    min-width: 0;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

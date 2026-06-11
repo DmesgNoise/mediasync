@@ -508,6 +508,7 @@ function createDownloaderRow() {
                         <select class="settings-select" name="downloader_type" data-downloader-type>
                             <option value="sabnzbd" selected>SABnzbd</option>
                             <option value="transmission">Transmission</option>
+                            <option value="qbittorrent">qBittorrent</option>
                         </select>
                     </label>
 
@@ -692,7 +693,7 @@ function markDownloaderUnsaved(row) {
 }
 
 function downloaderUsesUsernamePassword(downloaderType) {
-    return ["transmission"].includes(String(downloaderType || "").trim().toLowerCase());
+    return ["transmission", "qbittorrent"].includes(String(downloaderType || "").trim().toLowerCase());
 }
 
 function downloaderAuthFieldsTemplate(downloaderType, values = {}) {
@@ -964,6 +965,7 @@ function formatDownloaderName(downloaderType) {
         sab: "SABnzbd",
         sabnzbd: "SABnzbd",
         transmission: "Transmission",
+        qbittorrent: "qBittorrent",
     };
 
     return labels[downloaderType] || downloaderType;
