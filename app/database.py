@@ -918,7 +918,6 @@ def _source_label(source_type, source_name=None):
         "sonarr": "Sonarr",
         "seerr": "Seerr",
         "jellyseerr": "Jellyseerr",
-        "ombi": "Ombi",
         "sab": "SABnzbd",
         "sabnzbd": "SABnzbd",
         "emby": "Emby",
@@ -1109,7 +1108,7 @@ def _lifecycle_has_events(cursor, lifecycle_id):
 def _initial_lifecycle_stage_for_origin(source_type, source_app=None):
     normalized_source_type = str(source_type or "").strip().lower()
 
-    if normalized_source_type in {"seerr", "jellyseerr", "ombi"}:
+    if normalized_source_type in {"seerr", "jellyseerr"}:
         return "Requested"
 
     if normalized_source_type in {"radarr", "sonarr"}:

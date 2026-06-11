@@ -31,7 +31,6 @@ class RequestAppProvider(ABC):
 SUPPORTED_REQUEST_APP_TYPES = {
     "seerr",
     "overseerr",
-    "ombi",
 }
 
 
@@ -52,9 +51,5 @@ def build_request_app_provider(app_type: str | None, server_url: str, api_key: s
 
         return OverseerrProvider(server_url=server_url, api_key=api_key)
 
-    if normalized_type == "ombi":
-        from app.providers.request_apps.ombi import OmbiProvider
-
-        return OmbiProvider(server_url=server_url, api_key=api_key)
 
     return None

@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Form, Request
 
-from app.actions.ombi_webhook_activity import process_ombi_webhook_event
 from app.actions.seerr_webhook_activity import process_seerr_webhook_event
 from app.database import (
     delete_request_app,
@@ -316,40 +315,6 @@ async def seerr_webhook(request_app_id: int, request: Request):
     )
 
 
-@router.post("/webhook/ombi/{request_app_id}")
-async def ombi_webhook(request_app_id: int, request: Request):
-    request_app = get_request_app(request_app_id)
-
-    if not request_app:
-        return {
-            "success": False,
-            "message": "Request app not found.",
-        }
-
-    if str(request_app.get("app_type", "")).strip().lower() != "ombi":
-        return {
-            "success": False,
-            "message": "Request app is not an Ombi integration.",
-        }
-
-    try:
-        payload = await request.json()
-    except Exception:
-        payload = {}
-
-    provider = build_request_app_provider(
-        app_type=request_app["app_type"],
-        server_url=request_app["app_url"],
-        api_key=request_app["api_key"],
-    )
-
-    return process_ombi_webhook_event(
-        request_app=request_app,
-        payload=payload,
-        provider=provider,
-    )
-
-
 def _register_request_app_webhook(request_app):
     if not request_app:
         return {
@@ -392,8 +357,6 @@ def _register_request_app_webhook(request_app):
 
     if app_type == "seerr":
         webhook_url = f"{mediasync_url}/api/request-apps/webhook/seerr/{request_app['id']}"
-    elif app_type == "ombi":
-        webhook_url = f"{mediasync_url}/api/request-apps/webhook/ombi/{request_app['id']}"
     else:
         return {
             "attempted": False,

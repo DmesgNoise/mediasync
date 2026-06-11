@@ -72,7 +72,6 @@ function createRequestAppRow() {
                         <span>Request App Type</span>
                         <select class="settings-select" name="app_type" data-request-app-type>
                             <option value="seerr" selected>Seerr</option>
-                            <option value="ombi">Ombi</option>
                         </select>
                     </label>
 
@@ -955,7 +954,6 @@ function formatRequestAppName(appType) {
     const labels = {
         seerr: "Seerr",
         overseerr: "Overseerr",
-        ombi: "Ombi",
     };
 
     return labels[appType] || appType;

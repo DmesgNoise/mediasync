@@ -1043,7 +1043,6 @@ async def auth_and_setup_gate(request: Request, call_next):
         webhook_paths = (
             path.startswith("/api/source/webhook/")
             or path.startswith("/api/request-apps/webhook/seerr/")
-            or path.startswith("/api/request-apps/webhook/ombi/")
         )
 
         if webhook_paths:
