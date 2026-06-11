@@ -16,6 +16,32 @@ from app.providers.downloaders.base import (
 router = APIRouter(prefix="/api/downloaders", tags=["downloaders"])
 
 
+def _downloader_auth_value(
+    api_key: str | None = "",
+    username: str | None = "",
+    password: str | None = "",
+) -> str:
+    normalized_api_key = str(api_key or "").strip()
+    normalized_username = str(username or "").strip()
+    normalized_password = str(password or "").strip()
+
+    if normalized_api_key:
+        return normalized_api_key
+
+    if normalized_username or normalized_password:
+        return f"{normalized_username}:{normalized_password}"
+
+    return ""
+
+
+def _stored_downloader_auth_value(downloader: dict) -> str:
+    return _downloader_auth_value(
+        api_key=downloader.get("api_key"),
+        username=downloader.get("username"),
+        password=downloader.get("password"),
+    )
+
+
 @router.get("")
 async def list_downloaders():
     return {
@@ -29,7 +55,9 @@ async def list_downloaders():
 async def test_downloader(
     downloader_type: str = Form(...),
     downloader_url: str = Form(...),
-    api_key: str = Form(...),
+    api_key: str = Form(""),
+    username: str = Form(""),
+    password: str = Form(""),
 ):
     normalized_type = downloader_type.strip().lower()
 
@@ -42,7 +70,7 @@ async def test_downloader(
     provider = build_downloader_provider(
         downloader_type=normalized_type,
         server_url=downloader_url,
-        api_key=api_key,
+        api_key=_downloader_auth_value(api_key, username, password),
     )
 
     if not provider:
@@ -59,7 +87,9 @@ async def save_downloader_settings(
     downloader_name: str = Form(...),
     downloader_type: str = Form(...),
     downloader_url: str = Form(...),
-    api_key: str = Form(...),
+    api_key: str = Form(""),
+    username: str = Form(""),
+    password: str = Form(""),
     downloader_id: str = Form(""),
 ):
     normalized_type = downloader_type.strip().lower()
@@ -73,7 +103,7 @@ async def save_downloader_settings(
     provider = build_downloader_provider(
         downloader_type=normalized_type,
         server_url=downloader_url,
-        api_key=api_key,
+        api_key=_downloader_auth_value(api_key, username, password),
     )
 
     if not provider:
@@ -104,6 +134,8 @@ async def save_downloader_settings(
         downloader_type=normalized_type,
         downloader_url=downloader_url,
         api_key=api_key,
+        username=username,
+        password=password,
         version=result.get("version", "Unknown"),
         connected=1,
     )
@@ -122,7 +154,9 @@ async def update_downloader_settings(
     downloader_id: int = Form(...),
     downloader_name: str = Form(...),
     downloader_url: str = Form(...),
-    api_key: str = Form(...),
+    api_key: str = Form(""),
+    username: str = Form(""),
+    password: str = Form(""),
 ):
     downloader = get_downloader(downloader_id)
 
@@ -135,7 +169,7 @@ async def update_downloader_settings(
     provider = build_downloader_provider(
         downloader_type=downloader["downloader_type"],
         server_url=downloader_url,
-        api_key=api_key,
+        api_key=_downloader_auth_value(api_key, username, password),
     )
 
     if not provider:
@@ -154,6 +188,8 @@ async def update_downloader_settings(
         downloader_name=downloader_name,
         downloader_url=downloader_url,
         api_key=api_key,
+        username=username,
+        password=password,
         version=result.get("version", "Unknown"),
         connected=1,
     )
@@ -215,7 +251,7 @@ async def get_downloader_queue(downloader_id: int = Form(...)):
     provider = build_downloader_provider(
         downloader_type=downloader["downloader_type"],
         server_url=downloader["downloader_url"],
-        api_key=downloader["api_key"],
+        api_key=_stored_downloader_auth_value(downloader),
     )
 
     if not provider:
@@ -241,7 +277,7 @@ async def get_all_downloader_queues():
         provider = build_downloader_provider(
             downloader_type=downloader["downloader_type"],
             server_url=downloader["downloader_url"],
-            api_key=downloader["api_key"],
+            api_key=_stored_downloader_auth_value(downloader),
         )
 
         if not provider:
@@ -262,6 +298,7 @@ async def get_all_downloader_queues():
         result["downloader_id"] = downloader["id"]
         result["downloader_name"] = downloader["downloader_name"]
         result["downloader_type"] = downloader["downloader_type"]
+        result["version"] = downloader.get("version") or result.get("version") or "Unknown"
 
         if not result.get("success"):
             overall_success = False

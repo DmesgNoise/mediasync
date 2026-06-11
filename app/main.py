@@ -194,6 +194,24 @@ def _normalize_request_count_data(result):
 
 
 
+def _downloader_auth_value(downloader: dict | None) -> str:
+    if not downloader:
+        return ""
+
+    api_key = str(downloader.get("api_key") or "").strip()
+
+    if api_key:
+        return api_key
+
+    username = str(downloader.get("username") or "").strip()
+    password = str(downloader.get("password") or "").strip()
+
+    if username or password:
+        return f"{username}:{password}"
+
+    return ""
+
+
 def _empty_downloader_totals():
     return {
         "active": 0,
@@ -217,7 +235,7 @@ def _get_downloader_dashboard_stats(downloaders):
         provider = build_downloader_provider(
             downloader_type=downloader.get("downloader_type"),
             server_url=downloader.get("downloader_url"),
-            api_key=downloader.get("api_key"),
+            api_key=_downloader_auth_value(downloader),
         )
 
         if not provider:
@@ -666,6 +684,35 @@ def _arr_api_get(source: dict, endpoint: str, params: dict | None = None) -> dic
         }
 
 
+def _arr_health_issue_is_update(issue: dict) -> bool:
+    if not isinstance(issue, dict):
+        return False
+
+    source = str(issue.get("source") or "").strip().lower()
+    message = str(issue.get("message") or issue.get("errorMessage") or issue.get("details") or "").strip().lower()
+    wiki_url = str(issue.get("wikiUrl") or "").strip().lower()
+
+    if source == "updatecheck":
+        return True
+
+    if "new update is available" in message:
+        return True
+
+    if "new-update-is-available" in wiki_url:
+        return True
+
+    return False
+
+
+def _arr_health_update_message(issue: dict) -> str:
+    message = str((issue or {}).get("message") or "").strip()
+
+    if message:
+        return message
+
+    return "Update available."
+
+
 def _arr_health_issue_message(issue: dict) -> str:
     if not isinstance(issue, dict):
         return "Unknown health warning"
@@ -775,14 +822,34 @@ def _source_service_status(source: dict, queue_stats: dict | None = None) -> dic
     health_items = health_result.get("data")
 
     if isinstance(health_items, list) and health_items:
-        messages = [_arr_health_issue_message(item) for item in health_items]
-        label = "1 Warning" if len(messages) == 1 else f"{len(messages)} Warnings"
+        update_items = [
+            item
+            for item in health_items
+            if _arr_health_issue_is_update(item)
+        ]
+        problem_items = [
+            item
+            for item in health_items
+            if not _arr_health_issue_is_update(item)
+        ]
 
-        return _service_status_error(
-            label=label,
-            details=" | ".join(messages),
-            reachable=True,
-        )
+        if problem_items:
+            messages = [_arr_health_issue_message(item) for item in problem_items]
+            label = "1 Warning" if len(messages) == 1 else f"{len(messages)} Warnings"
+
+            return _service_status_error(
+                label=label,
+                details=" | ".join(messages),
+                reachable=True,
+            )
+
+        if update_items:
+            update_messages = [_arr_health_update_message(item) for item in update_items]
+
+            return _service_status_warning(
+                label="Update Available",
+                details=" | ".join(update_messages) or f"Update available for {source_name}.",
+            )
 
     update = _arr_update_available(source)
 
@@ -976,6 +1043,7 @@ async def auth_and_setup_gate(request: Request, call_next):
         webhook_paths = (
             path.startswith("/api/source/webhook/")
             or path.startswith("/api/request-apps/webhook/seerr/")
+            or path.startswith("/api/request-apps/webhook/ombi/")
         )
 
         if webhook_paths:

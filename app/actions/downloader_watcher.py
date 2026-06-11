@@ -32,6 +32,24 @@ ACTIVE_STATES = {
 CANCELLED_STATES = {"cancelled", "canceled", "deleted", "removed", "aborted"}
 
 
+def _downloader_auth_value(downloader: dict[str, Any] | None) -> str:
+    if not downloader:
+        return ""
+
+    api_key = str(downloader.get("api_key") or "").strip()
+
+    if api_key:
+        return api_key
+
+    username = str(downloader.get("username") or "").strip()
+    password = str(downloader.get("password") or "").strip()
+
+    if username or password:
+        return f"{username}:{password}"
+
+    return ""
+
+
 def start_downloader_watcher(source: dict[str, Any], import_event: dict[str, Any]) -> None:
     media_title = str(import_event.get("media_title") or "Unknown media").strip()
     watcher_key = f"{source.get('id')}:{media_title.lower()}"
@@ -226,7 +244,7 @@ def _get_combined_downloader_state(
         provider = build_downloader_provider(
             downloader_type=downloader.get("downloader_type"),
             server_url=downloader.get("downloader_url"),
-            api_key=downloader.get("api_key"),
+            api_key=_downloader_auth_value(downloader),
         )
 
         if not provider:
@@ -295,7 +313,7 @@ def _resolve_from_downloader_history(
         provider = build_downloader_provider(
             downloader_type=downloader.get("downloader_type"),
             server_url=downloader.get("downloader_url"),
-            api_key=downloader.get("api_key"),
+            api_key=_downloader_auth_value(downloader),
         )
 
         if not provider or not hasattr(provider, "get_history"):
@@ -454,7 +472,7 @@ def _download_details(download: dict[str, Any], queue_state: dict[str, Any]) -> 
     elif queue_state.get("timeleft"):
         parts.append(f"{queue_state.get('timeleft')} remaining")
 
-    return " • ".join(parts)
+    return " â¢ ".join(parts)
 
 
 def _history_details(item: dict[str, Any]) -> str:
@@ -469,7 +487,7 @@ def _history_details(item: dict[str, Any]) -> str:
     if item.get("size"):
         parts.append(str(item.get("size")))
 
-    return " • ".join(parts)
+    return " â¢ ".join(parts)
 
 
 def _normalize_text(value: Any) -> str:

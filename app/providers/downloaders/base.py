@@ -3,6 +3,7 @@ from typing import Any
 
 SUPPORTED_DOWNLOADER_TYPES = {
     "sabnzbd": "SABnzbd",
+    "transmission": "Transmission",
 }
 
 
@@ -39,6 +40,14 @@ def build_downloader_provider(
         from app.providers.downloaders.sabnzbd import SABnzbdProvider
 
         return SABnzbdProvider(
+            server_url=server_url or "",
+            api_key=api_key or "",
+        )
+
+    if normalized_type == "transmission":
+        from app.providers.downloaders.transmission import TransmissionProvider
+
+        return TransmissionProvider(
             server_url=server_url or "",
             api_key=api_key or "",
         )

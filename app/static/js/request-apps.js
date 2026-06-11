@@ -72,6 +72,7 @@ function createRequestAppRow() {
                         <span>Request App Type</span>
                         <select class="settings-select" name="app_type" data-request-app-type>
                             <option value="seerr" selected>Seerr</option>
+                            <option value="ombi">Ombi</option>
                         </select>
                     </label>
 
@@ -507,6 +508,7 @@ function createDownloaderRow() {
                         <span>Downloader Type</span>
                         <select class="settings-select" name="downloader_type" data-downloader-type>
                             <option value="sabnzbd" selected>SABnzbd</option>
+                            <option value="transmission">Transmission</option>
                         </select>
                     </label>
 
@@ -515,13 +517,9 @@ function createDownloaderRow() {
                         <input name="downloader_url" type="text" placeholder="Enter server URL">
                     </label>
 
-                    <label>
-                        <span>API Key</span>
-                        <div class="settings-secret-row">
-                            <input name="api_key" type="password" placeholder="Enter API key">
-                            <button class="mini-action-button" type="button" data-downloader-toggle-secret>Show</button>
-                        </div>
-                    </label>
+                    <div data-downloader-auth-fields>
+                        ${downloaderAuthFieldsTemplate("sabnzbd")}
+                    </div>
                 </div>
             </div>
 
@@ -556,23 +554,16 @@ function wireDownloaderRow(row) {
     const typeSelect = row.querySelector('select[name="downloader_type"]');
     const nameInput = row.querySelector('input[name="downloader_name"]');
     const urlInput = row.querySelector('input[name="downloader_url"]');
-    const apiKeyInput = row.querySelector('input[name="api_key"]');
-    const secretButton = row.querySelector("[data-downloader-toggle-secret], [data-toggle-secret]");
-
-    if (secretButton) {
-        secretButton.addEventListener("click", () => {
-            toggleSecretInput(secretButton);
-        });
-    }
 
     if (typeSelect) {
         typeSelect.addEventListener("change", () => {
+            renderDownloaderAuthFields(row);
             invalidateDownloaderConnection(row);
             syncDownloaderLogo(row);
         });
     }
 
-    [urlInput, apiKeyInput].forEach((input) => {
+    [urlInput].forEach((input) => {
         if (!input) {
             return;
         }
@@ -617,7 +608,7 @@ function wireDownloaderRow(row) {
                     <p>This will remove:</p>
                     <ul>
                         <li>Downloader connection</li>
-                        <li>Stored API key</li>
+                        <li>Stored credentials</li>
                     </ul>
                 `,
                 actionText: "Delete Downloader",
@@ -641,6 +632,7 @@ function wireDownloaderRow(row) {
         });
     }
 
+    wireDownloaderAuthFields(row);
     syncDownloaderLogo(row);
     updateDownloaderStatic(row);
     setDownloaderEditing(row, row.dataset.editing === "true");
@@ -700,6 +692,77 @@ function markDownloaderUnsaved(row) {
     }
 }
 
+function downloaderUsesUsernamePassword(downloaderType) {
+    return ["transmission"].includes(String(downloaderType || "").trim().toLowerCase());
+}
+
+function downloaderAuthFieldsTemplate(downloaderType, values = {}) {
+    if (downloaderUsesUsernamePassword(downloaderType)) {
+        return `
+            <label>
+                <span>Username</span>
+                <input name="username" type="text" placeholder="Enter username" value="${escapeIntegrationHtml(values.username || "")}">
+            </label>
+
+            <label>
+                <span>Password</span>
+                <div class="settings-secret-row">
+                    <input name="password" type="password" placeholder="Enter password" value="${escapeIntegrationHtml(values.password || "")}">
+                    <button class="mini-action-button" type="button" data-downloader-auth-toggle-secret>Show</button>
+                </div>
+            </label>
+        `;
+    }
+
+    return `
+        <label>
+            <span>API Key</span>
+            <div class="settings-secret-row">
+                <input name="api_key" type="password" placeholder="Enter API key" value="${escapeIntegrationHtml(values.apiKey || "")}">
+                <button class="mini-action-button" type="button" data-downloader-auth-toggle-secret>Show</button>
+            </div>
+        </label>
+    `;
+}
+
+function renderDownloaderAuthFields(row) {
+    const authFields = row.querySelector("[data-downloader-auth-fields]");
+    const downloaderType = row.querySelector('select[name="downloader_type"]')?.value || "sabnzbd";
+
+    if (!authFields) {
+        return;
+    }
+
+    const values = {
+        apiKey: row.querySelector('input[name="api_key"]')?.value || "",
+        username: row.querySelector('input[name="username"]')?.value || "",
+        password: row.querySelector('input[name="password"]')?.value || "",
+    };
+
+    authFields.innerHTML = downloaderAuthFieldsTemplate(downloaderType, values);
+    wireDownloaderAuthFields(row);
+}
+
+function wireDownloaderAuthFields(row) {
+    const authFields = row.querySelector("[data-downloader-auth-fields]");
+
+    if (!authFields) {
+        return;
+    }
+
+    authFields.querySelectorAll("[data-downloader-auth-toggle-secret]").forEach((button) => {
+        button.addEventListener("click", () => {
+            toggleSecretInput(button);
+        });
+    });
+
+    authFields.querySelectorAll("input").forEach((input) => {
+        input.addEventListener("input", () => {
+            invalidateDownloaderConnection(row);
+        });
+    });
+}
+
 function syncDownloaderLogo(row) {
     const typeSelect = row.querySelector('select[name="downloader_type"]');
     const logo = row.querySelector("[data-downloader-logo]");
@@ -717,16 +780,21 @@ async function testDownloader(row) {
     const downloaderType = row.querySelector('select[name="downloader_type"]')?.value || "sabnzbd";
     const downloaderUrl = row.querySelector('input[name="downloader_url"]')?.value.trim() || "";
     const apiKey = row.querySelector('input[name="api_key"]')?.value.trim() || "";
+    const username = row.querySelector('input[name="username"]')?.value.trim() || "";
+    const password = row.querySelector('input[name="password"]')?.value.trim() || "";
+    const usernamePasswordAuth = downloaderUsesUsernamePassword(downloaderType);
 
     row.dataset.connectionValid = "false";
     row.dataset.downloaderVersion = "";
     updateDownloaderSaveState(row);
     updateDownloaderStatic(row);
 
-    if (!downloaderUrl || !apiKey) {
+    if (!downloaderUrl || (usernamePasswordAuth ? (!username || !password) : !apiKey)) {
         showDownloaderResult(row, {
             success: false,
-            message: "Enter a server URL and API key first.",
+            message: usernamePasswordAuth
+                ? "Enter a server URL, username, and password first."
+                : "Enter a server URL and API key first.",
         });
         return;
     }
@@ -746,6 +814,8 @@ async function testDownloader(row) {
         formData.append("downloader_type", downloaderType);
         formData.append("downloader_url", downloaderUrl);
         formData.append("api_key", apiKey);
+        formData.append("username", username);
+        formData.append("password", password);
 
         const result = await requestAppFetchJson("/api/downloaders/test", formData);
 
@@ -780,6 +850,8 @@ async function saveDownloader(row) {
     const downloaderType = row.querySelector('select[name="downloader_type"]')?.value || "sabnzbd";
     const downloaderUrl = row.querySelector('input[name="downloader_url"]')?.value.trim() || "";
     const apiKey = row.querySelector('input[name="api_key"]')?.value.trim() || "";
+    const username = row.querySelector('input[name="username"]')?.value.trim() || "";
+    const password = row.querySelector('input[name="password"]')?.value.trim() || "";
 
     if (saveButton) {
         saveButton.disabled = true;
@@ -792,6 +864,8 @@ async function saveDownloader(row) {
     formData.append("downloader_type", downloaderType);
     formData.append("downloader_url", downloaderUrl);
     formData.append("api_key", apiKey);
+    formData.append("username", username);
+    formData.append("password", password);
 
     const result = await requestAppFetchJson("/api/downloaders/save", formData);
 
@@ -891,6 +965,7 @@ function formatDownloaderName(downloaderType) {
     const labels = {
         sab: "SABnzbd",
         sabnzbd: "SABnzbd",
+        transmission: "Transmission",
     };
 
     return labels[downloaderType] || downloaderType;

@@ -337,6 +337,7 @@
                                         <span>Request App Type</span>
                                         <select class="settings-select" name="app_type" data-request-app-type>
                                             <option value="seerr" {% if request_app["app_type"] == "seerr" %}selected{% endif %}>Seerr</option>
+                                            <option value="ombi" {% if request_app["app_type"] == "ombi" %}selected{% endif %}>Ombi</option>
                                         </select>
                                     </label>
 
@@ -436,6 +437,7 @@
                                         <select class="settings-select" name="downloader_type" data-downloader-type>
                                             <option value="sab" {% if downloader["downloader_type"] == "sab" %}selected{% endif %}>SABnzbd</option>
                                             <option value="sabnzbd" {% if downloader["downloader_type"] == "sabnzbd" %}selected{% endif %}>SABnzbd</option>
+                                            <option value="transmission" {% if downloader["downloader_type"] == "transmission" %}selected{% endif %}>Transmission</option>
                                         </select>
                                     </label>
 
@@ -444,13 +446,30 @@
                                         <input name="downloader_url" type="text" placeholder="Enter server URL" value="{{ downloader['downloader_url'] }}">
                                     </label>
 
-                                    <label>
-                                        <span>API Key</span>
-                                        <div class="settings-secret-row">
-                                            <input name="api_key" type="password" placeholder="Enter API key" value="{{ downloader['api_key'] }}">
-                                            <button class="mini-action-button" type="button" data-downloader-toggle-secret>Show</button>
-                                        </div>
-                                    </label>
+                                    <div data-downloader-auth-fields>
+                                        {% if downloader["downloader_type"] == "transmission" %}
+                                            <label>
+                                                <span>Username</span>
+                                                <input name="username" type="text" placeholder="Enter username" value="{{ downloader['username'] or '' }}">
+                                            </label>
+
+                                            <label>
+                                                <span>Password</span>
+                                                <div class="settings-secret-row">
+                                                    <input name="password" type="password" placeholder="Enter password" value="{{ downloader['password'] or '' }}">
+                                                    <button class="mini-action-button" type="button" data-downloader-auth-toggle-secret>Show</button>
+                                                </div>
+                                            </label>
+                                        {% else %}
+                                            <label>
+                                                <span>API Key</span>
+                                                <div class="settings-secret-row">
+                                                    <input name="api_key" type="password" placeholder="Enter API key" value="{{ downloader['api_key'] }}">
+                                                    <button class="mini-action-button" type="button" data-downloader-auth-toggle-secret>Show</button>
+                                                </div>
+                                            </label>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
 

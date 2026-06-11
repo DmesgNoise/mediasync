@@ -198,6 +198,8 @@ def init_db():
             downloader_type TEXT NOT NULL,
             downloader_url TEXT NOT NULL,
             api_key TEXT NOT NULL,
+            username TEXT,
+            password TEXT,
             version TEXT,
             connected INTEGER DEFAULT 0,
             sort_order INTEGER DEFAULT 0
@@ -286,6 +288,8 @@ def init_db():
     _add_column_if_missing(c, "sources", "sort_order", "INTEGER DEFAULT 0")
     _add_column_if_missing(c, "request_apps", "sort_order", "INTEGER DEFAULT 0")
     _add_column_if_missing(c, "downloaders", "sort_order", "INTEGER DEFAULT 0")
+    _add_column_if_missing(c, "downloaders", "username", "TEXT")
+    _add_column_if_missing(c, "downloaders", "password", "TEXT")
     _add_column_if_missing(c, "sync_activity", "lifecycle_id", "INTEGER")
     _add_column_if_missing(c, "lifecycles", "quality_profile", "TEXT")
     _add_column_if_missing(c, "lifecycles", "poster_url", "TEXT")
@@ -717,6 +721,8 @@ def save_downloader(
     downloader_type,
     downloader_url,
     api_key,
+    username="",
+    password="",
     version="",
     connected=1,
     downloader_id=None,
@@ -727,13 +733,16 @@ def save_downloader(
     if downloader_id:
         c.execute("""
             UPDATE downloaders SET downloader_name = ?, downloader_type = ?,
-                downloader_url = ?, api_key = ?, version = ?, connected = ?
+                downloader_url = ?, api_key = ?, username = ?, password = ?,
+                version = ?, connected = ?
             WHERE id = ?
         """, (
             downloader_name,
             downloader_type,
             downloader_url,
             api_key,
+            username,
+            password,
             version,
             connected,
             downloader_id,
@@ -745,14 +754,16 @@ def save_downloader(
         c.execute("""
             INSERT INTO downloaders (
                 downloader_name, downloader_type, downloader_url, api_key,
-                version, connected, sort_order
+                username, password, version, connected, sort_order
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             downloader_name,
             downloader_type,
             downloader_url,
             api_key,
+            username,
+            password,
             version,
             connected,
             next_order,
@@ -790,6 +801,8 @@ def update_downloader_config(
     downloader_name,
     downloader_url,
     api_key,
+    username="",
+    password="",
     version="",
     connected=1,
 ):
@@ -797,12 +810,14 @@ def update_downloader_config(
     c = conn.cursor()
     c.execute("""
         UPDATE downloaders SET downloader_name = ?, downloader_url = ?,
-            api_key = ?, version = ?, connected = ?
+            api_key = ?, username = ?, password = ?, version = ?, connected = ?
         WHERE id = ?
     """, (
         downloader_name,
         downloader_url,
         api_key,
+        username,
+        password,
         version,
         connected,
         downloader_id,
