@@ -2222,6 +2222,7 @@ function renderLifecycleDetailModal(data, titleElement, bodyElement, popupType) 
     LIFECYCLE_CURRENT_DATA = {
         lifecycle,
         events: visibleEvents,
+        rawEvents: events,
         mediaServer,
         popupType,
         tvOverview: data.tv_overview || null,
@@ -2264,6 +2265,7 @@ function renderLifecycleDetailModal(data, titleElement, bodyElement, popupType) 
                     <div class="lifecycle-timeline" data-lifecycle-timeline>
                         ${renderLifecycleTimeline(visibleEvents, popupType)}
                     </div>
+                    ${renderLifecycleMetrics(events, lifecycle, mediaServer)}
                 </section>
 
                 <aside class="lifecycle-current-card lifecycle-detail-right" data-lifecycle-current-card>
@@ -2859,7 +2861,9 @@ function lifecycleArrLabel(events, arrType) {
 }
 
 function firstLifecycleEvent(events, kinds) {
-    return events.find((event) => kinds.includes(event.kind));
+    return [...events]
+        .filter((event) => kinds.includes(event.kind))
+        .sort((a, b) => lifecycleEventTimestamp(a) - lifecycleEventTimestamp(b))[0] || null;
 }
 
 function latestLifecycleEvent(events, kinds) {
@@ -2916,6 +2920,88 @@ function availableIsCurrentForSequence(available, downloadStarted) {
     return Boolean(available && (!downloadStarted || lifecycleEventIsAfter(available, downloadStarted)));
 }
 
+function renderLifecycleMetrics(rawEvents, lifecycle = {}, mediaServer = {}) {
+    const events = Array.isArray(rawEvents)
+        ? rawEvents.map((event) => normalizeLifecycleEvent(event, lifecycle, mediaServer)).filter(Boolean)
+        : [];
+
+    const grabbed = latestLifecycleEvent(events, ["grabbed"]);
+    const available = latestLifecycleEvent(events, ["available"]);
+    const downloadStarted = latestLifecycleEvent(events, ["download_started"]);
+    const downloadCompleted = latestLifecycleEvent(
+        events.filter((event) =>
+            event &&
+            event.kind === "download_completed" &&
+            (!downloadStarted || lifecycleEventTimestamp(event) >= lifecycleEventTimestamp(downloadStarted))
+        ),
+        ["download_completed"]
+    );
+
+    const downloadTime = downloadStarted && downloadCompleted
+        ? formatLifecycleDuration(downloadStarted.created_at, downloadCompleted.created_at)
+        : "In progress";
+
+    const totalTime = grabbed && available && lifecycleEventTimestamp(available) >= lifecycleEventTimestamp(grabbed)
+        ? formatLifecycleDuration(grabbed.created_at, available.created_at)
+        : "In progress";
+
+    return `
+        <div class="lifecycle-metrics" data-lifecycle-metrics>
+            <div class="lifecycle-metric">
+                <span>Download Time</span>
+                <strong>${escapeHtml(downloadTime)}</strong>
+            </div>
+            <div class="lifecycle-metric">
+                <span>Total Time</span>
+                <strong>${escapeHtml(totalTime)}</strong>
+            </div>
+        </div>
+    `;
+}
+
+function updateLifecycleMetrics(rawEvents, lifecycle = {}, mediaServer = {}) {
+    const metrics = document.querySelector("[data-lifecycle-metrics]");
+
+    if (!metrics) {
+        return;
+    }
+
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = renderLifecycleMetrics(rawEvents, lifecycle, mediaServer).trim();
+
+    if (wrapper.firstElementChild) {
+        metrics.replaceWith(wrapper.firstElementChild);
+    }
+}
+
+function formatLifecycleDuration(startValue, endValue) {
+    if (!startValue || !endValue) {
+        return "In progress";
+    }
+
+    const start = new Date(startValue).getTime();
+    const end = new Date(endValue).getTime();
+
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
+        return "—";
+    }
+
+    const totalSeconds = Math.round((end - start) / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+        return `${hours}h ${minutes}m ${seconds}s`;
+    }
+
+    if (minutes > 0) {
+        return `${minutes}m ${seconds}s`;
+    }
+
+    return `${seconds}s`;
+}
+
 function renderLifecycleTimeline(events, popupType = "movie") {
     if (!events.length) {
         return `<div class="lifecycle-empty">No lifecycle stages yet.</div>`;
@@ -2970,6 +3056,24 @@ function stateTokenSymbol(stateClass) {
     }
 
     return "✓";
+}
+
+function enrichLifecycleEventsWithActiveDownload(events, activeDownload) {
+    if (!activeDownload || !Array.isArray(events)) {
+        return events;
+    }
+
+    return events.map((stage) => {
+        if (!stage || stage.id !== "download" || stage.state !== "active") {
+            return stage;
+        }
+
+        return {
+            ...stage,
+            source_type: activeDownload.downloader_type || stage.source_type || "downloader",
+            source_name: activeDownload.downloader_name || stage.source_name || "Downloader",
+        };
+    });
 }
 
 function renderCurrentLifecycleActivity(events, mediaServer, popupType = "movie", lifecycle = {}, tvOverview = null) {
@@ -3031,9 +3135,10 @@ function renderTvCurrentDownloadingCard(download, stage) {
                         <div class="lifecycle-current-title">Downloading</div>
                         <div class="lifecycle-current-meta">${escapeHtml(itemName)}</div>
                     </div>
-                    <strong>${safePercent}%</strong>
+                    <div class="lifecycle-tv-current-ring">
+                        ${progressRingMarkup(safePercent, "compact")}
+                    </div>
                 </div>
-                <div class="lifecycle-tv-current-progress"><span style="width:${safePercent}%"></span></div>
                 <div class="lifecycle-tv-current-subline">${escapeHtml(download.downloader_name || "Downloader")} ${download.speed ? `• ${escapeHtml(download.speed)}` : ""}${(download.eta || download.queue_timeleft) ? ` • ETA: ${escapeHtml(download.eta || download.queue_timeleft)}` : ""}</div>
             </div>
         `;
@@ -3218,6 +3323,7 @@ async function refreshLifecycleCurrentActivity() {
                     LIFECYCLE_CURRENT_DATA = {
                         lifecycle,
                         events: visibleEvents,
+                        rawEvents,
                         mediaServer,
                         popupType: "tv",
                         tvOverview,
@@ -3227,6 +3333,8 @@ async function refreshLifecycleCurrentActivity() {
                     if (timeline) {
                         timeline.innerHTML = renderLifecycleTimeline(visibleEvents, "tv");
                     }
+
+                    updateLifecycleMetrics(rawEvents, lifecycle, mediaServer);
 
                     const leftPanel = document.querySelector(".lifecycle-detail-left");
                     if (leftPanel) {
@@ -3255,8 +3363,18 @@ async function refreshLifecycleCurrentActivity() {
             // Keep existing TV popup content if a live overview refresh fails.
         }
 
-        currentCard.innerHTML = renderTvCurrentLifecycleActivity(
+        const visibleTvEvents = enrichLifecycleEventsWithActiveDownload(
             LIFECYCLE_CURRENT_DATA.events,
+            activeDownload,
+        );
+
+        const timeline = document.querySelector("[data-lifecycle-timeline]");
+        if (timeline) {
+            timeline.innerHTML = renderLifecycleTimeline(visibleTvEvents, LIFECYCLE_CURRENT_DATA.popupType);
+        }
+
+        currentCard.innerHTML = renderTvCurrentLifecycleActivity(
+            visibleTvEvents,
             LIFECYCLE_CURRENT_DATA.mediaServer,
             LIFECYCLE_CURRENT_DATA.lifecycle,
             LIFECYCLE_CURRENT_DATA.tvOverview,
@@ -3302,6 +3420,7 @@ async function refreshLifecycleCurrentActivity() {
                 LIFECYCLE_CURRENT_DATA = {
                     lifecycle,
                     events: visibleEvents,
+                    rawEvents,
                     mediaServer,
                     popupType: LIFECYCLE_CURRENT_DATA.popupType,
                     tvOverview: null,
@@ -3312,6 +3431,8 @@ async function refreshLifecycleCurrentActivity() {
                 if (timeline) {
                     timeline.innerHTML = renderLifecycleTimeline(visibleEvents, LIFECYCLE_CURRENT_DATA.popupType);
                 }
+
+                updateLifecycleMetrics(rawEvents, lifecycle, mediaServer);
             }
         }
     } catch (error) {
@@ -3443,11 +3564,12 @@ function renderDownloadingCurrentActivity(download) {
     `;
 }
 
-function progressRingMarkup(percent) {
+function progressRingMarkup(percent, extraClass = "") {
     const degrees = Math.round((percent / 100) * 360);
+    const className = ["lifecycle-progress-ring", extraClass].filter(Boolean).join(" ");
 
     return `
-        <div class="lifecycle-progress-ring" style="--progress-deg:${degrees}deg">
+        <div class="${escapeHtml(className)}" style="--progress-deg:${degrees}deg">
             <div class="lifecycle-progress-ring-inner">${escapeHtml(String(percent))}%</div>
         </div>
     `;
