@@ -38,7 +38,7 @@
                                 </div>
                             </div>
 
-                            <div class="activity-page-time">{{ event["created_at"] }}</div>
+                            <div class="activity-page-time">{{ event["created_at"] | compact_datetime }}</div>
                         </div>
 
                         {% if event["media_title"] %}

@@ -298,6 +298,7 @@ async def get_all_downloader_queues():
         result["downloader_id"] = downloader["id"]
         result["downloader_name"] = downloader["downloader_name"]
         result["downloader_type"] = downloader["downloader_type"]
+        result["downloader_url"] = downloader.get("downloader_url") or ""
         result["version"] = downloader.get("version") or result.get("version") or "Unknown"
 
         if not result.get("success"):

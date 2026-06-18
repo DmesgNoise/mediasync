@@ -84,6 +84,24 @@ templates = Jinja2Templates(
 
 templates.env.globals["mediasync_version"] = MEDIASYNC_VERSION
 
+def compact_datetime(value):
+    if not value:
+        return ""
+
+    raw_value = str(value).strip()
+
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            parsed = datetime.strptime(raw_value[:19], fmt)
+            return parsed.strftime("%b %-d, %-I:%M %p")
+        except ValueError:
+            continue
+
+    return raw_value
+
+
+templates.env.filters["compact_datetime"] = compact_datetime
+
 app.mount(
     "/static",
     StaticFiles(directory="app/static"),

@@ -1,3 +1,4 @@
+
 document.addEventListener("DOMContentLoaded", () => {
     initTimezoneSelectors();
     initSecretToggles();
@@ -1390,9 +1391,19 @@ function initLiveActivityStream() {
     }
 
     document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible" && (!stream || stream.readyState === EventSource.CLOSED)) {
-            connect();
+        if (document.visibilityState === "visible") {
+            if (!stream || stream.readyState === EventSource.CLOSED) {
+                connect();
+            }
+
+            refreshDashboardActionItems();
+            refreshOpenLifecyclePopup();
         }
+    });
+
+    window.addEventListener("focus", () => {
+        refreshDashboardActionItems();
+        refreshOpenLifecyclePopup();
     });
 
     connect();
@@ -1696,11 +1707,15 @@ function upsertActivityFeedItem(feed, item, limit) {
 
     if (existing) {
         existing.replaceWith(item);
+        initDashboardSeedingPills();
+        refreshDashboardSeedingPills();
         return;
     }
 
     feed.prepend(item);
     trimActivityFeed(feed, limit);
+    initDashboardSeedingPills();
+    refreshDashboardSeedingPills();
 }
 
 function renderDashboardActivityEvent(event, fileDetailLevel = "filename") {
@@ -1722,6 +1737,8 @@ function renderDashboardActivityEvent(event, fileDetailLevel = "filename") {
     const details = dashboardActivityDetails(event, fileDetailLevel);
     const detailsHtml = details ? `<div class="dashboard-2-activity-file">${escapeHtml(details)}</div>` : "";
 
+    item.dataset.lifecycleMatchTitle = title;
+
     item.innerHTML = `
         <div class="dashboard-2-activity-dot"></div>
         <div class="dashboard-2-activity-body">
@@ -1729,8 +1746,9 @@ function renderDashboardActivityEvent(event, fileDetailLevel = "filename") {
             ${subtitleHtml}
             ${detailsHtml}
         </div>
-        <div class="dashboard-2-activity-time">${escapeHtml(event.created_at || "Now")}</div>
+        <div class="dashboard-2-activity-time">${escapeHtml(formatActivityTimestamp(event.created_at || "Now"))}</div>
         <div class="dashboard-2-chevron">›</div>
+        <a class="dashboard-2-seeding-pill hidden" data-seeding-pill href="#" target="_blank" rel="noopener" onclick="event.stopPropagation();" title="Open in downloader">Seeding</a>
     `;
 
     return item;
@@ -1739,6 +1757,27 @@ function renderDashboardActivityEvent(event, fileDetailLevel = "filename") {
 function dashboardActivityTitle(event) {
     return event.media_title || event.title || event.event_type || "Activity";
 }
+
+function formatActivityTimestamp(value) {
+    if (!value || value === "Now") {
+        return "Now";
+    }
+
+    const normalized = String(value).replace(" ", "T");
+    const date = new Date(normalized);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return date.toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    });
+}
+
 
 function dashboardActivitySubtitle(event) {
     const eventType = String(event.event_type || "").trim();
@@ -1816,7 +1855,7 @@ function renderActivityPageEvent(event, fileDetailLevel) {
                     <div class="activity-page-title">${escapeHtml(event.event_type || "Activity")}</div>
                     <div class="activity-page-route">${escapeHtml(route)}</div>
                 </div>
-                <div class="activity-page-time">${escapeHtml(event.created_at || "Now")}</div>
+                <div class="activity-page-time">${escapeHtml(formatActivityTimestamp(event.created_at || "Now"))}</div>
             </div>
             ${mediaTitle}
             ${fileHtml}
@@ -1850,6 +1889,90 @@ function trimActivityFeed(feed, limit) {
         child.remove();
     });
 }
+
+let DASHBOARD_SEEDING_PILL_TIMER = null;
+
+function initDashboardSeedingPills() {
+    const feed = document.querySelector("[data-dashboard-activity-feed]");
+
+    if (!feed || DASHBOARD_SEEDING_PILL_TIMER) {
+        return;
+    }
+
+    refreshDashboardSeedingPills();
+    DASHBOARD_SEEDING_PILL_TIMER = window.setInterval(refreshDashboardSeedingPills, 60000);
+}
+
+async function refreshDashboardSeedingPills() {
+    const rows = Array.from(document.querySelectorAll(".dashboard-2-activity-row[data-lifecycle-id]"));
+
+    if (!rows.length) {
+        return;
+    }
+
+    let result;
+
+    try {
+        const response = await fetch("/api/downloaders/queue/all", {
+            headers: { "Accept": "application/json" },
+        });
+        result = await response.json();
+    } catch (error) {
+        return;
+    }
+
+    for (const row of rows) {
+        const pill = row.querySelector("[data-seeding-pill]");
+
+        if (!pill) {
+            continue;
+        }
+
+        let activeDownload = null;
+        const lifecycleId = row.dataset.lifecycleId || "";
+
+        if (lifecycleId) {
+            try {
+                const lifecycleResponse = await fetch(`/api/lifecycle/${encodeURIComponent(lifecycleId)}`, {
+                    headers: { "Accept": "application/json" },
+                });
+                const lifecycleData = await lifecycleResponse.json();
+
+                if (lifecycleResponse.ok && lifecycleData.success) {
+                    activeDownload = findLifecycleActiveDownload(
+                        { queues: result.queues || [] },
+                        lifecycleData.lifecycle || {},
+                        lifecycleData.tv_overview || null,
+                    );
+                }
+            } catch (error) {
+                activeDownload = null;
+            }
+        }
+
+        const isSeeding = Boolean(
+            activeDownload &&
+            String(activeDownload.status || "").trim().toLowerCase() === "seeding"
+        );
+
+        if (isSeeding) {
+            const ratio = Number(activeDownload.ratio || 0);
+            const ratioText = Number.isFinite(ratio) ? `${ratio.toFixed(2)}x` : "";
+            const downloaderName = activeDownload.downloader_name || "Downloader";
+            const downloaderUrl = activeDownload.queue?.downloader_url || "#";
+
+            pill.innerHTML = `
+                <span class="dashboard-2-seeding-pill-label">${escapeHtml(ratioText ? `Seeding ${ratioText}` : "Seeding")}</span>
+                <span class="dashboard-2-seeding-open-text">${escapeHtml(`Open in ${downloaderName}`)}</span>
+            `;
+            pill.href = downloaderUrl;
+            pill.title = `Open in ${downloaderName}`;
+        }
+
+        pill.classList.toggle("hidden", !isSeeding);
+    }
+}
+
 
 function setActiveSyncCount(count) {
     const el = document.querySelector("[data-active-sync-count]");
@@ -2552,15 +2675,19 @@ function buildLifecycleStageModel(events, lifecycle, mediaServer, tvOverview = n
     const mediaServerType = String((mediaServer || {}).server_type || "").trim().toLowerCase();
     const mediaServerLabelText = mediaServerLabel(mediaServerType) || "Media Server";
 
-    const requested = firstLifecycleEvent(events, ["requested"]);
-    const grabbed = firstLifecycleEvent(events, ["grabbed"]);
-    const downloadStarted = firstLifecycleEvent(events, ["download_started"]);
-    const downloadCompleted = firstLifecycleEvent(events, ["download_completed"]);
-    const downloadCancelled = firstLifecycleEvent(events, ["download_cancelled"]);
-    const downloadFailed = firstLifecycleEvent(events, ["download_failed"]);
-    const imported = firstLifecycleEvent(events, ["imported"]);
-    const libraryScan = firstLifecycleEvent(events, ["library_scan"]);
-    const available = firstLifecycleEvent(events, ["available"]);
+    const requested = latestLifecycleEvent(events, ["requested"]);
+    const grabbed = latestLifecycleEvent(events, ["grabbed"]);
+    const downloadStarted = latestLifecycleEvent(events, ["download_started"]);
+    const downloadCompleted = latestLifecycleEvent(events, ["download_completed"]);
+    const downloadCancelled = latestLifecycleEvent(events, ["download_cancelled"]);
+    const downloadFailed = latestLifecycleEvent(events, ["download_failed"]);
+    const imported = latestLifecycleEvent(events, ["imported"]);
+    const libraryScan = latestLifecycleEvent(events, ["library_scan"]);
+    const available = latestLifecycleEvent(events, ["available"]);
+
+    const successfulAfterDownload = latestOfLifecycleEvents([imported, libraryScan, available]);
+    const downloadCancelledIsTerminal = Boolean(downloadCancelled && !successfulAfterDownload && !imported && !libraryScan && !available);
+    const downloadFailedIsTerminal = Boolean(downloadFailed && !successfulAfterDownload && !imported && !libraryScan && !available);
 
     const mediaType = String(lifecycle.media_type || "").toLowerCase();
     const isTvLifecycle = arrType === "sonarr" || ["tv", "show", "series", "tvshows"].includes(mediaType);
@@ -2618,16 +2745,16 @@ function buildLifecycleStageModel(events, lifecycle, mediaServer, tvOverview = n
         }),
         lifecycleStage({
             id: "download",
-            completeLabel: downloadCancelled ? "Download Cancelled" : (downloadFailed ? "Download Failed" : "Downloaded"),
+            completeLabel: downloadCancelledIsTerminal ? "Download Cancelled" : (downloadFailedIsTerminal ? "Download Failed" : "Downloaded"),
             activeLabel: downloadStarted ? "Downloading" : "Waiting for Download",
             futureLabel: "Waiting for Download",
             source_type: downloadStarted?.source_type || downloadCompleted?.source_type || downloadCancelled?.source_type || downloadFailed?.source_type || "downloader",
             source_name: downloadStarted?.source_name || downloadCompleted?.source_name || downloadCancelled?.source_name || downloadFailed?.source_name || "Downloader",
-            event: downloadFailed || downloadCancelled || downloadCompleted || downloadStarted,
-            complete: Boolean(downloadCompleted || downloadCancelled || downloadFailed || imported || libraryScan || available),
-            active: Boolean((grabbed || requested) && !downloadCompleted && !downloadCancelled && !downloadFailed && !imported && !libraryScan && !available),
-            failed: Boolean(downloadFailed),
-            cancelled: Boolean(downloadCancelled),
+            event: (downloadFailedIsTerminal ? downloadFailed : null) || (downloadCancelledIsTerminal ? downloadCancelled : null) || downloadCompleted || downloadStarted,
+            complete: Boolean(downloadCompleted || downloadCancelledIsTerminal || downloadFailedIsTerminal || imported || libraryScan || available),
+            active: Boolean((grabbed || requested) && !downloadCompleted && !downloadCancelledIsTerminal && !downloadFailedIsTerminal && !imported && !libraryScan && !available),
+            failed: Boolean(downloadFailedIsTerminal),
+            cancelled: Boolean(downloadCancelledIsTerminal),
         }),
         lifecycleStage({
             id: "import",
@@ -2703,8 +2830,8 @@ function buildTvLifecycleStageModel(context) {
     const activeTvDownloading = Boolean(_safeNumber((tvOverview || {}).series?.episodes_downloading) > 0 && !availableIsCurrentForSequence(available, downloadStarted));
 
     const successfulAfterDownload = latestOfLifecycleEvents([imported, libraryScan, available]);
-    const downloadCancelledIsTerminal = Boolean(downloadCancelled && !successfulAfterDownload);
-    const downloadFailedIsTerminal = Boolean(downloadFailed && !successfulAfterDownload);
+    const downloadCancelledIsTerminal = Boolean(downloadCancelled && !successfulAfterDownload && !imported && !libraryScan && !available);
+    const downloadFailedIsTerminal = Boolean(downloadFailed && !successfulAfterDownload && !imported && !libraryScan && !available);
     const downloadTerminal = latestOfLifecycleEvents([downloadCompleted, downloadCancelledIsTerminal ? downloadCancelled : null, downloadFailedIsTerminal ? downloadFailed : null]);
     const downloadTerminalAfterStart = Boolean(downloadTerminal && (!downloadStarted || lifecycleEventIsSameOrAfter(downloadTerminal, downloadStarted)));
     const importedAfterDownload = Boolean(imported && (!downloadStarted || lifecycleEventIsAfter(imported, downloadStarted)) && (!downloadCompleted || lifecycleEventIsSameOrAfter(imported, downloadCompleted)));
@@ -2748,7 +2875,7 @@ function buildTvLifecycleStageModel(context) {
         }),
         lifecycleStage({
             id: "download",
-            completeLabel: downloadCancelled ? "Download Cancelled" : (downloadFailed ? "Download Failed" : "Downloaded"),
+            completeLabel: downloadCancelledIsTerminal ? "Download Cancelled" : (downloadFailedIsTerminal ? "Download Failed" : "Downloaded"),
             activeLabel: "Downloading",
             futureLabel: "Waiting for Download",
             source_type: downloadStarted?.source_type || downloadCompleted?.source_type || downloadCancelled?.source_type || downloadFailed?.source_type || "downloader",
@@ -2937,8 +3064,9 @@ function renderLifecycleMetrics(rawEvents, lifecycle = {}, mediaServer = {}) {
         ["download_completed"]
     );
 
-    const downloadTime = downloadStarted && downloadCompleted
-        ? formatLifecycleDuration(downloadStarted.created_at, downloadCompleted.created_at)
+    const downloadEnd = downloadCompleted || latestOfLifecycleEvents([available, latestLifecycleEvent(events, ["library_scan"]), latestLifecycleEvent(events, ["imported"])]);
+    const downloadTime = downloadStarted && downloadEnd && lifecycleEventTimestamp(downloadEnd) >= lifecycleEventTimestamp(downloadStarted)
+        ? formatLifecycleDuration(downloadStarted.created_at, downloadEnd.created_at)
         : "In progress";
 
     const totalTime = grabbed && available && lifecycleEventTimestamp(available) >= lifecycleEventTimestamp(grabbed)
@@ -3120,20 +3248,76 @@ function renderTvCurrentLifecycleActivity(events, mediaServer, lifecycle = {}, t
     return `<div class="lifecycle-tv-current-stack">${cards.join("")}</div>`;
 }
 
+function downloaderStatusLabel(status) {
+    const normalized = String(status || "").trim().toLowerCase();
+
+    const labels = {
+        queued: "Queued",
+        fetching: "Fetching",
+        grabbing: "Fetching",
+        downloading: "Downloading",
+        paused: "Paused",
+        checking: "Checking",
+        verifying: "Verifying",
+        repairing: "Repairing",
+        extracting: "Unpacking",
+        unpacking: "Unpacking",
+        download_completed: "Download Completed",
+        completed: "Download Completed",
+        complete: "Download Completed",
+        failed: "Download Failed",
+        failure: "Download Failed",
+        error: "Download Failed",
+        cancelled: "Download Cancelled",
+        canceled: "Download Cancelled",
+        deleted: "Download Cancelled",
+        removed: "Download Cancelled",
+        aborted: "Download Cancelled",
+        seeding: "Seeding",
+    };
+
+    return labels[normalized] || "Downloading";
+}
+
+function downloaderStateClass(status) {
+    const normalized = String(status || "").trim().toLowerCase();
+
+    if (["paused"].includes(normalized)) {
+        return "paused";
+    }
+
+    if (["failed", "failure", "error"].includes(normalized)) {
+        return "failed";
+    }
+
+    if (["cancelled", "canceled", "deleted", "removed", "aborted"].includes(normalized)) {
+        return "cancelled";
+    }
+
+    if (["completed", "complete", "download_completed"].includes(normalized)) {
+        return "complete";
+    }
+
+    return "active";
+}
+
 function renderTvCurrentDownloadingCard(download, stage) {
     if (download) {
         const percent = Number(download.percent || 0);
         const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
         const itemName = download.name || download.filename || stage?.source_name || "Download";
         const icon = lifecycleIconMarkup({ source_type: download.downloader_type || "downloader", source_name: download.downloader_name || "Downloader" });
+        const title = downloaderStatusLabel(download.status);
+        const stateClass = downloaderStateClass(download.status);
 
         return `
-            <div class="lifecycle-tv-current-card downloading">
+            <div class="lifecycle-tv-current-card downloading ${escapeHtml(String(download.status || "").trim().toLowerCase())}">
                 <div class="lifecycle-tv-current-title-row">
                     <div class="lifecycle-current-icon">${icon}</div>
                     <div>
-                        <div class="lifecycle-current-title">Downloading</div>
+                        <div class="lifecycle-current-title">${escapeHtml(title)}</div>
                         <div class="lifecycle-current-meta">${escapeHtml(itemName)}</div>
+                        <div class="lifecycle-current-state ${escapeHtml(stateClass)}">${escapeHtml(title)}</div>
                     </div>
                     <div class="lifecycle-tv-current-ring">
                         ${progressRingMarkup(safePercent, "compact")}
@@ -3263,6 +3447,12 @@ function startLifecycleCurrentPolling() {
     stopLifecycleCurrentPolling();
 
     if (!LIFECYCLE_CURRENT_DATA) {
+        return;
+    }
+
+    const current = LIFECYCLE_CURRENT_DATA.current || currentLifecycleStage(LIFECYCLE_CURRENT_DATA.events || []);
+
+    if (!current || String(current.state || current.status || "").toLowerCase() !== "active") {
         return;
     }
 
@@ -3409,8 +3599,8 @@ async function refreshLifecycleCurrentActivity() {
                     const downloadStage = visibleEvents.find((stage) => stage && stage.id === "download");
 
                     if (downloadStage) {
-                        downloadStage.state = "active";
-                        downloadStage.label = "Downloading";
+                        downloadStage.state = downloaderStateClass(activeDownload.status) === "paused" ? "active" : "active";
+                        downloadStage.label = downloaderStatusLabel(activeDownload.status);
                         downloadStage.source_type = activeDownload.downloader_type || "downloader";
                         downloadStage.source_name = activeDownload.downloader_name || "Downloader";
                         downloadStage.event = activeDownload;
@@ -3537,18 +3727,22 @@ function renderDownloadingCurrentActivity(download) {
     const icon = lifecycleIconMarkup({ source_type: download.downloader_type || "downloader", source_name: download.downloader_name || "Downloader" });
     const downloaded = download.size && download.remaining ? `${download.remaining} left of ${download.size}` : (download.size || "");
     const itemName = download.name || download.filename || "Download";
+    const status = String(download.status || "").trim().toLowerCase();
+    const title = downloaderStatusLabel(status);
+    const stateLabel = title;
+    const stateClass = downloaderStateClass(status);
 
     return `
-        <div class="lifecycle-current-header-row downloading">
+        <div class="lifecycle-current-header-row downloading ${escapeHtml(status)}">
             <div class="lifecycle-current-progress-first">
                 ${progressRingMarkup(safePercent)}
             </div>
             <div class="lifecycle-current-main centered">
                 <div class="lifecycle-current-icon large">${icon}</div>
                 <div>
-                    <div class="lifecycle-current-title">Downloading</div>
+                    <div class="lifecycle-current-title">${escapeHtml(title)}</div>
                     <div class="lifecycle-current-meta">${escapeHtml(itemName)}</div>
-                    <div class="lifecycle-current-state active">In Progress</div>
+                    <div class="lifecycle-current-state ${escapeHtml(stateClass)}">${escapeHtml(stateLabel)}</div>
                 </div>
             </div>
         </div>
@@ -3560,7 +3754,7 @@ function renderDownloadingCurrentActivity(download) {
             ${lifecycleCurrentStat("Priority", download.priority || "—")}
             ${lifecycleCurrentStat("Path", download.filename || download.name || "—")}
         </div>
-        <div class="lifecycle-current-note">This item is currently downloading. Progress will update automatically.</div>
+        <div class="lifecycle-current-note">This downloader state updates automatically while the item remains in the queue.</div>
     `;
 }
 
@@ -3850,3 +4044,6 @@ function escapeHtml(value) {
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
 }
+
+
+window.addEventListener("load", initDashboardSeedingPills);

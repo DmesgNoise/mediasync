@@ -3,10 +3,11 @@ import json
 from fastapi import APIRouter, BackgroundTasks, Form, Request
 
 from app.actions.scan_coordinator import request_scan
-from app.actions.downloader_watcher import start_downloader_watcher
+from app.actions.downloader_watcher import start_downloader_watcher, stop_downloader_watchers_for_lifecycle
 from app.database import (
     add_activity_event,
     add_lifecycle_event,
+    delete_lifecycle_by_identity,
     get_or_create_lifecycle,
     update_lifecycle_status,
     delete_source,
@@ -136,6 +137,31 @@ async def source_webhook(source_id: int, request: Request):
 
     payload = await _read_json_payload(request)
     import_event = _parse_import_event(source["source_type"], payload)
+
+    if import_event.get("is_delete"):
+        deleted = delete_lifecycle_by_identity(
+            media_type=import_event.get("media_type"),
+            title=import_event.get("media_title"),
+            tmdb_id=import_event.get("tmdb_id"),
+            tvdb_id=import_event.get("tvdb_id"),
+            imdb_id=import_event.get("imdb_id"),
+        )
+
+        return {
+            "success": True,
+            "message": (
+                "Pipeline item removed. Existing lifecycle was deleted."
+                if deleted
+                else "Pipeline item removed. No matching lifecycle was found."
+            ),
+            "scan_requested": False,
+            "lifecycle_deleted": deleted,
+            "source_id": source["id"],
+            "source_name": source["source_name"],
+            "source_type": source["source_type"],
+            "media_title": import_event.get("media_title"),
+        }
+
     lifecycle_id = _get_or_create_lifecycle_from_arr_event(source, import_event)
     import_event["lifecycle_id"] = lifecycle_id
 
@@ -212,6 +238,8 @@ async def source_webhook(source_id: int, request: Request):
             "message": "No media library is mapped to this source.",
             "scan_requested": False,
         }
+
+    stop_downloader_watchers_for_lifecycle(lifecycle_id)
 
     add_activity_event(
         event_type=f"{source['source_name']} import detected",

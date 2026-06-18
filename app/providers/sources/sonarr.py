@@ -186,7 +186,7 @@ class SonarrProvider:
                 "onUpgrade": True,
                 "onRename": True,
                 "onSeriesAdd": False,
-                "onSeriesDelete": False,
+                "onSeriesDelete": True,
                 "onEpisodeFileDelete": True,
                 "onEpisodeFileDeleteForUpgrade": False,
                 "onHealthIssue": False,
@@ -291,6 +291,7 @@ class SonarrProvider:
         event_type = str(payload.get("eventType", "")).strip()
         normalized_event = event_type.lower()
         is_grab = normalized_event == "grab"
+        is_delete = normalized_event in {"seriesdelete", "episodefiledelete"}
 
         series = payload.get("series") or {}
         episodes = payload.get("episodes") or []
@@ -340,8 +341,13 @@ class SonarrProvider:
         return {
             "should_scan": should_scan,
             "is_grab": is_grab,
+            "is_delete": is_delete,
             "event_type": event_type or "unknown",
-            "media_title": media_title,
+            "media_type": "tv",
+            "media_title": series_title,
+            "tmdb_id": series.get("tmdbId") or series.get("tmdb_id"),
+            "tvdb_id": series.get("tvdbId") or series.get("tvdb_id"),
+            "imdb_id": series.get("imdbId") or series.get("imdb_id"),
             "file_name": file_name,
             "file_path": file_path,
             "message": (

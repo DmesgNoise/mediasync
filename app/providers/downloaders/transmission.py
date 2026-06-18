@@ -352,7 +352,7 @@ class TransmissionProvider(BaseDownloaderProvider):
             return "failed"
 
         if left_until_done == 0 and percent_done >= 1.0 and status_code in {self.STATUS_SEED_WAIT, self.STATUS_SEED}:
-            return "completed"
+            return "seeding"
 
         if status_code == self.STATUS_DOWNLOAD:
             return "downloading"

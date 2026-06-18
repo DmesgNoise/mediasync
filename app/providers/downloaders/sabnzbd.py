@@ -123,6 +123,11 @@ class SABnzbdProvider(BaseDownloaderProvider):
             if isinstance(item, dict)
         ]
 
+        active_downloads = [
+            download for download in downloads
+            if download.get("status") not in {"download_completed", "failed", "cancelled"}
+        ]
+
         return {
             "success": True,
             "version": str(queue.get("version") or "Unknown"),
@@ -130,7 +135,7 @@ class SABnzbdProvider(BaseDownloaderProvider):
             "paused": bool(queue.get("paused")),
             "speed": self._normalize_speed(queue.get("speed")),
             "kbpersec": self._to_float(queue.get("kbpersec")),
-            "active_count": len(downloads),
+            "active_count": len(active_downloads),
             "total_count": self._to_int(queue.get("noofslots_total"), len(downloads)),
             "timeleft": str(queue.get("timeleft") or ""),
             "size": str(queue.get("size") or ""),
@@ -160,12 +165,16 @@ class SABnzbdProvider(BaseDownloaderProvider):
         }
 
     def normalize_download_item(self, item: dict[str, Any], queue: dict[str, Any] | None = None) -> dict[str, Any]:
+        raw_status = str(item.get("status") or "Unknown")
+        status = self._normalize_queue_status(raw_status, item=item, queue=queue)
+
         return {
             "id": str(item.get("nzo_id") or item.get("id") or item.get("index") or ""),
             "name": str(item.get("filename") or item.get("name") or "Unknown Download"),
             "filename": str(item.get("filename") or item.get("name") or "Unknown Download"),
             "category": str(item.get("cat") or item.get("category") or ""),
-            "status": str(item.get("status") or "Unknown"),
+            "status": status,
+            "raw_status": raw_status,
             "percent": self._to_float(item.get("percentage")),
             "eta": str(item.get("timeleft") or ""),
             "size": str(item.get("size") or ""),
@@ -199,6 +208,42 @@ class SABnzbdProvider(BaseDownloaderProvider):
             "storage": storage,
             "raw": item,
         }
+
+    def _normalize_queue_status(self, status: str, item: dict[str, Any] | None = None, queue: dict[str, Any] | None = None) -> str:
+        status_text = str(status or "").strip().lower()
+        queue_status = str((queue or {}).get("status") or "").strip().lower()
+        item_text = f"{status_text} {queue_status}".strip()
+
+        if any(word in item_text for word in ("fail", "failure", "error", "missing articles", "repair failed", "unpack failed", "crc", "password")):
+            return "failed"
+
+        if any(word in item_text for word in ("cancel", "canceled", "cancelled", "deleted", "aborted", "user abort", "user deleted")):
+            return "cancelled"
+
+        if "paused" in item_text or bool((queue or {}).get("paused")):
+            return "paused"
+
+        if any(word in item_text for word in ("repair", "verifying", "verify", "check", "checking")):
+            return "repairing"
+
+        if any(word in item_text for word in ("extract", "unpack", "unpacking")):
+            return "unpacking"
+
+        # SAB's downloader work is complete once unpacking has finished. If SAB briefly
+        # reports moving or complete/completed, treat that as the downloader handoff point.
+        if any(word in item_text for word in ("moving", "move", "complete", "completed")):
+            return "download_completed"
+
+        if any(word in item_text for word in ("fetch", "grabbing")):
+            return "fetching"
+
+        if any(word in item_text for word in ("queued", "queue")):
+            return "queued"
+
+        if any(word in item_text for word in ("download", "downloading")):
+            return "downloading"
+
+        return status_text or "unknown"
 
     def _history_final_state(self, status: str, fail_message: str, storage: str, downloaded: Any) -> str:
         status_text = str(status or "").strip().lower()

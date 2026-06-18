@@ -252,7 +252,7 @@ class QBittorrentProvider(BaseDownloaderProvider):
             return "failed"
 
         if progress >= 1.0 and normalized in {"uploading", "stalledup", "queuedup", "pausedup", "forcedup"}:
-            return "completed"
+            return "seeding"
 
         if normalized in {"downloading", "forceddl", "metadl"}:
             return "downloading"

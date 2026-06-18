@@ -6525,3 +6525,152 @@ body.modal-open {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* Compact circular download progress for TV current activity cards */
+.lifecycle-tv-current-ring {
+    margin-left: auto;
+    flex: 0 0 auto;
+}
+
+.lifecycle-progress-ring.compact {
+    width: 54px;
+    height: 54px;
+}
+
+.lifecycle-progress-ring.compact .lifecycle-progress-ring-inner {
+    width: 42px;
+    height: 42px;
+    font-size: 0.78rem;
+}
+
+/* Lifecycle timing metrics */
+.lifecycle-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.lifecycle-metric {
+    padding: 0.85rem 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.58);
+}
+
+.lifecycle-metric span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.35rem;
+}
+
+.lifecycle-metric strong {
+    color: var(--text);
+    font-size: 1rem;
+}
+
+/* MediaSync dashboard seeding activity pill */
+.dashboard-2-activity-row {
+    position: relative;
+}
+
+.dashboard-2-seeding-pill {
+    position: absolute;
+    top: 2.05rem;
+    right: 2.45rem;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 7.25rem;
+    padding: 0.36rem 0.82rem;
+    border-radius: 999px;
+    border: 1px solid rgba(74, 222, 128, 0.55);
+    background: linear-gradient(180deg, rgba(54, 190, 76, 0.96), rgba(24, 145, 52, 0.96));
+    color: #ffffff;
+    box-shadow: 0 0.55rem 1.4rem rgba(34, 197, 94, 0.24);
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.035em;
+    line-height: 1;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.dashboard-2-seeding-pill.hidden {
+    display: none;
+}
+
+.dashboard-2-seeding-pill:hover {
+    color: #ffffff;
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+}
+
+@media (max-width: 820px) {
+    .dashboard-2-seeding-pill {
+        position: static;
+        width: fit-content;
+        min-width: 0;
+        margin-top: 0.75rem;
+        padding: 0.36rem 0.8rem;
+    }
+}
+
+/* MediaSync seeding pill visible action text */
+.dashboard-2-seeding-pill {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.42rem;
+    width: fit-content;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    color: inherit;
+    text-transform: none;
+}
+
+.dashboard-2-seeding-pill-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.36rem 0.82rem;
+    border-radius: 999px;
+    border: 1px solid rgba(74, 222, 128, 0.55);
+    background: linear-gradient(180deg, rgba(54, 190, 76, 0.96), rgba(24, 145, 52, 0.96));
+    color: #ffffff;
+    box-shadow: 0 0.55rem 1.4rem rgba(34, 197, 94, 0.24);
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.035em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.dashboard-2-seeding-open-text {
+    display: block;
+    color: rgba(220, 235, 245, 0.82);
+    font-size: 0.86rem;
+    font-weight: 650;
+    line-height: 1.15;
+    text-transform: none;
+    letter-spacing: 0;
+    text-decoration: none;
+}
+
+.dashboard-2-seeding-pill:hover .dashboard-2-seeding-pill-label {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+}
+
+.dashboard-2-seeding-pill:hover .dashboard-2-seeding-open-text {
+    color: rgba(246, 250, 252, 0.96);
+}
+

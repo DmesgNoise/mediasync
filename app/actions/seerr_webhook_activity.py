@@ -74,9 +74,25 @@ def process_seerr_webhook_event(
         )
         update_lifecycle_status(lifecycle_id, "denied")
     else:
-        # Request-app events create the media activity card at request time.
-        # Auto-approved/processing Seerr notifications still represent the initial request
-        # in the user-facing feed; later Arr/downloader/media-server events update the card.
+        # Seerr is the request-origin authority. Record a real sync_activity row
+        # for request/approval/processing notifications so the activity feed and
+        # lifecycle origin do not appear to start at Radarr/Sonarr when the Arr
+        # webhook arrives immediately after approval.
+        add_activity_event(
+            event_type=sentence,
+            status=_event_status(action),
+            source_name=request_app.get("app_name") or "Seerr",
+            source_type=request_app.get("app_type") or "seerr",
+            media_title=normalized.get("title") or sentence,
+            details=normalized.get("quality_profile") or "",
+            lifecycle_id=lifecycle_id,
+            lifecycle_stage=_lifecycle_stage_for_action(action),
+        )
+
+        # Auto-approved/processing Seerr notifications still represent the
+        # initial request in the user-facing lifecycle. Do not let them advance
+        # past request ownership; later Arr/downloader/media-server events own
+        # the pipeline stages.
         update_lifecycle_status(lifecycle_id, "requested")
 
     return {
@@ -221,7 +237,7 @@ def _enrich_from_seerr_request(provider: Any, normalized: dict[str, Any]) -> dic
         "tmdb_id": request_item.get("tmdb_id") or media.get("tmdbId") or request_data.get("tmdbId"),
         "tvdb_id": request_item.get("tvdb_id") or media.get("tvdbId") or request_data.get("tvdbId"),
         "imdb_id": media.get("imdbId") or request_data.get("imdbId"),
-        "poster_url": _poster_url(media),
+        "poster_url": normalized.get("poster_url") or _poster_url(media),
     }
 
 
@@ -413,7 +429,7 @@ def _normalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "tmdb_id": _first_value(payload.get("tmdb_id"), payload.get("tmdbId"), media.get("tmdbId"), request.get("tmdbId")),
         "tvdb_id": _first_value(payload.get("tvdb_id"), payload.get("tvdbId"), media.get("tvdbId"), request.get("tvdbId")),
         "imdb_id": _first_value(payload.get("imdb_id"), payload.get("imdbId"), media.get("imdbId"), request.get("imdbId")),
-        "poster_url": _poster_url(media),
+        "poster_url": _string_value(payload.get("image")) or _poster_url(media),
         "server_id": _first_value(
             payload.get("server_id"),
             payload.get("serverId"),

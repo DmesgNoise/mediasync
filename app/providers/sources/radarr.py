@@ -119,7 +119,7 @@ class RadarrProvider:
                 "onUpgrade": True,
                 "onRename": True,
                 "onMovieAdded": False,
-                "onMovieDelete": False,
+                "onMovieDelete": True,
                 "onMovieFileDelete": True,
                 "onMovieFileDeleteForUpgrade": False,
                 "onHealthIssue": False,
@@ -224,6 +224,7 @@ class RadarrProvider:
         event_type = str(payload.get("eventType", "")).strip()
         normalized_event = event_type.lower()
         is_grab = normalized_event == "grab"
+        is_delete = normalized_event in {"moviedelete", "moviefiledelete"}
 
         movie = payload.get("movie") or {}
         movie_file = payload.get("movieFile") or {}
@@ -261,8 +262,12 @@ class RadarrProvider:
         return {
             "should_scan": should_scan,
             "is_grab": is_grab,
+            "is_delete": is_delete,
             "event_type": event_type or "unknown",
+            "media_type": "movie",
             "media_title": media_title,
+            "tmdb_id": movie.get("tmdbId") or movie.get("tmdb_id"),
+            "imdb_id": movie.get("imdbId") or movie.get("imdb_id"),
             "file_name": file_name,
             "file_path": file_path,
             "message": (

@@ -1185,6 +1185,40 @@ def get_or_create_lifecycle(
 
     if row:
         lifecycle_id = row["id"]
+
+        incoming_source_type = str(source_type or "").strip().lower()
+        existing_source_type = str(row["source_type"] or "").strip().lower()
+
+        # Request apps are lifecycle origin sources. If Radarr/Sonarr created the
+        # lifecycle first because their webhook won the race, a later Seerr
+        # webhook is allowed to claim origin ownership. Pipeline apps are never
+        # allowed to overwrite an existing Seerr/Jellyseerr origin.
+        seerr_claims_origin = (
+            incoming_source_type in {"seerr", "jellyseerr", "overseerr"}
+            and existing_source_type in {"", "radarr", "sonarr"}
+        )
+
+        effective_source_app = row["source_app"]
+        effective_source_type = row["source_type"]
+        effective_created_by = row["created_by"]
+
+        if seerr_claims_origin:
+            effective_source_app = source_app or row["source_app"]
+            effective_source_type = source_type or row["source_type"]
+            effective_created_by = created_by or row["created_by"]
+
+        existing_status = str(row["status"] or "").strip().lower()
+        incoming_status = str(status or "").strip().lower()
+
+        # Do not let a late request-origin webhook downgrade an active/completed
+        # pipeline lifecycle back to requested. It may claim origin, but the
+        # current pipeline status remains authoritative once downstream work has
+        # started.
+        if incoming_source_type in {"seerr", "jellyseerr", "overseerr"} and existing_status not in {"", "created", "requested", "approved", "processing"}:
+            effective_status = row["status"]
+        else:
+            effective_status = status
+
         c.execute(
             """
             UPDATE lifecycles
@@ -1194,9 +1228,9 @@ def get_or_create_lifecycle(
                 imdb_id = COALESCE(NULLIF(?, ''), imdb_id),
                 quality_profile = COALESCE(NULLIF(?, ''), quality_profile),
                 poster_url = COALESCE(NULLIF(?, ''), poster_url),
-                created_by = COALESCE(created_by, NULLIF(?, '')),
-                source_app = COALESCE(source_app, NULLIF(?, '')),
-                source_type = COALESCE(source_type, NULLIF(?, '')),
+                created_by = COALESCE(NULLIF(?, ''), created_by),
+                source_app = COALESCE(NULLIF(?, ''), source_app),
+                source_type = COALESCE(NULLIF(?, ''), source_type),
                 status = COALESCE(NULLIF(?, ''), status)
             WHERE id = ?
             """,
@@ -1206,10 +1240,10 @@ def get_or_create_lifecycle(
                 str(imdb_id or ""),
                 str(quality_profile or ""),
                 str(poster_url or ""),
-                str(created_by or ""),
-                str(source_app or ""),
-                str(source_type or ""),
-                str(status or ""),
+                str(effective_created_by or ""),
+                str(effective_source_app or ""),
+                str(effective_source_type or ""),
+                str(effective_status or ""),
                 lifecycle_id,
             ),
         )
@@ -1217,14 +1251,14 @@ def get_or_create_lifecycle(
         lifecycle_for_initial.update({
             "title": lifecycle_for_initial.get("title") or title,
             "quality_profile": lifecycle_for_initial.get("quality_profile") or quality_profile,
-            "source_app": lifecycle_for_initial.get("source_app") or source_app,
-            "source_type": lifecycle_for_initial.get("source_type") or source_type,
+            "source_app": effective_source_app or source_app,
+            "source_type": effective_source_type or source_type,
         })
         added_initial_event = _add_initial_lifecycle_event_for_origin(c, lifecycle_id, lifecycle_for_initial)
 
         conn.commit()
 
-        feed_event = _get_activity_feed_event_for_lifecycle(c, lifecycle_id) if added_initial_event else None
+        feed_event = _get_activity_feed_event_for_lifecycle(c, lifecycle_id) if added_initial_event or seerr_claims_origin else None
         conn.close()
 
         if feed_event:
@@ -1322,6 +1356,42 @@ def add_lifecycle_event(lifecycle_id, stage, status="success", source_name=None,
 
 
 def _add_lifecycle_event_with_cursor(cursor, lifecycle_id, stage, status="success", source_name=None, source_type=None, title=None, details=None, activity_id=None):
+    # If an origin lifecycle event was created before a sync_activity row existed,
+    # attach the first matching activity row instead of creating a duplicate
+    # Requested/Added stage. This keeps Seerr request-origin webhooks from
+    # duplicating the initial lifecycle stage while still creating a visible
+    # activity feed card.
+    if activity_id:
+        cursor.execute(
+            """
+            SELECT id
+            FROM lifecycle_events
+            WHERE lifecycle_id = ?
+              AND stage = ?
+              AND COALESCE(source_type, '') = COALESCE(?, '')
+              AND activity_id IS NULL
+            ORDER BY id ASC
+            LIMIT 1
+            """,
+            (lifecycle_id, stage, source_type),
+        )
+        existing = cursor.fetchone()
+
+        if existing:
+            cursor.execute(
+                """
+                UPDATE lifecycle_events
+                SET status = ?,
+                    source_name = COALESCE(NULLIF(?, ''), source_name),
+                    title = COALESCE(NULLIF(?, ''), title),
+                    details = COALESCE(NULLIF(?, ''), details),
+                    activity_id = ?
+                WHERE id = ?
+                """,
+                (status, str(source_name or ""), str(title or ""), str(details or ""), activity_id, existing["id"]),
+            )
+            return existing["id"]
+
     cursor.execute(
         """
         INSERT INTO lifecycle_events (
@@ -1373,6 +1443,55 @@ def get_lifecycle(lifecycle_id):
         "lifecycle": dict(lifecycle_row),
         "events": event_rows,
     }
+
+
+def delete_lifecycle_by_identity(media_type=None, title=None, tmdb_id=None, tvdb_id=None, imdb_id=None):
+    normalized_title = normalize_lifecycle_title(title)
+
+    conn = get_connection()
+    c = conn.cursor()
+
+    row = None
+
+    if tmdb_id:
+        c.execute("SELECT * FROM lifecycles WHERE tmdb_id = ? ORDER BY id DESC LIMIT 1", (str(tmdb_id),))
+        row = c.fetchone()
+
+    if not row and tvdb_id:
+        c.execute("SELECT * FROM lifecycles WHERE tvdb_id = ? ORDER BY id DESC LIMIT 1", (str(tvdb_id),))
+        row = c.fetchone()
+
+    if not row and imdb_id:
+        c.execute("SELECT * FROM lifecycles WHERE imdb_id = ? ORDER BY id DESC LIMIT 1", (str(imdb_id),))
+        row = c.fetchone()
+
+    if not row and normalized_title:
+        c.execute(
+            """
+            SELECT * FROM lifecycles
+            WHERE normalized_title = ?
+              AND COALESCE(media_type, '') = COALESCE(?, '')
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (normalized_title, str(media_type or "")),
+        )
+        row = c.fetchone()
+
+    if not row:
+        conn.close()
+        return False
+
+    lifecycle_id = row["id"]
+
+    c.execute("DELETE FROM lifecycle_events WHERE lifecycle_id = ?", (lifecycle_id,))
+    c.execute("DELETE FROM sync_activity WHERE lifecycle_id = ?", (lifecycle_id,))
+    c.execute("DELETE FROM lifecycles WHERE id = ?", (lifecycle_id,))
+    conn.commit()
+    conn.close()
+
+    return True
+
 
 def clear_activity_events():
     conn = get_connection()

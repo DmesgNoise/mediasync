@@ -79,8 +79,9 @@
                                 {% endif %}
                             </div>
 
-                            <div class="dashboard-2-activity-time">{{ event["created_at"] }}</div>
+                            <div class="dashboard-2-activity-time">{{ event["created_at"] | compact_datetime }}</div>
                             <div class="dashboard-2-chevron">›</div>
+                            <a class="dashboard-2-seeding-pill hidden" data-seeding-pill href="#" target="_blank" rel="noopener" onclick="event.stopPropagation();" title="Open in downloader">Seeding</a>
                         </div>
                     {% endfor %}
                 </div>
