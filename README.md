@@ -12,26 +12,26 @@
 </p>
 
 <p align="center">
-  MediaSync connects your request application, download client, media automation stack, and media server into a single dashboard. Track content from request through download, import, scan, and availability while monitoring the health of your media ecosystem from one place.
+  MediaSync provides visibility across the entire media pipeline, connecting requests, downloads, imports, scans, and media server availability into a single dashboard.
 </p>
 
 <p align="center">
   <strong>Request Tracking</strong> •
-  <strong>Download Visibility</strong> •
+  <strong>Live Download Visibility</strong> •
   <strong>Service Health Monitoring</strong> •
-  <strong>Smart TV Sync</strong> •
-  <strong>Multiple Instance Support</strong>
+  <strong>Queue-Aware TV Synchronization</strong> •
+  <strong>Multi-Instance Support</strong>
 </p>
 
 ---
 
 ## Why MediaSync?
 
-Modern media stacks are made up of multiple independent applications.
+Modern media stacks are made up of several independent applications.
 
-Requests, downloads, imports, scans, and media server availability are often spread across several dashboards.
+Requests happen in one application. Downloads happen in another. Imports, scans, and media server availability are tracked somewhere else.
 
-MediaSync brings the entire process together into a single view, providing visibility from request through availability.
+MediaSync brings the entire process together into a single view, allowing you to follow content from request through availability while also monitoring the health of the services that power your media ecosystem.
 
 ---
 
@@ -41,71 +41,31 @@ MediaSync brings the entire process together into a single view, providing visib
 
 ![Dashboard](app/static/img/screenshots/dashboard.png)
 
-The dashboard provides a live view of your media ecosystem.
+Monitor media servers, request applications, automation platforms, download clients, libraries, updates, warnings, and recent activity from a single dashboard.
 
-Features include:
+---
 
-- Service health monitoring
-- Request tracking
-- Download visibility
-- Library statistics
-- Availability tracking
-- Recent activity
-- Connected service status
+### Movie Request Tracking
 
-### Movie Progress Tracking
+![Movie Lifecycle](app/static/img/screenshots/movie_lifecycle.png)
 
-![Movie Progress](app/static/img/screenshots/movie_download.png)
+Track a movie from request through availability. MediaSync correlates requests, downloads, imports, scans, and media server updates into a single timeline while displaying metadata, quality profiles, poster artwork, and timing metrics.
 
-Track a movie from request through availability:
+---
 
-Requested
-↓
-Sent to Media Automation
-↓
-Downloading
-↓
-Imported
-↓
-Library Scan
-↓
-Available
+### Live TV Download Tracking
 
-The movie progress window provides:
+![TV Download](app/static/img/screenshots/tv_downloading.png)
 
-- Live download percentage
-- Import detection
-- Scan tracking
-- Availability confirmation
-- Request details
-- Media metadata
+Monitor active TV downloads in real time, including progress percentage, transfer speed, ETA, downloader status, and current processing stage.
 
-### TV Progress Tracking
+---
 
-![TV Progress](app/static/img/screenshots/tv_download.png)
+### TV Series Tracking and Synchronization
 
-Track TV episodes from request through availability:
+![TV Lifecycle](app/static/img/screenshots/tv_lifecycle.png)
 
-Requested
-↓
-Sent to Media Automation
-↓
-Downloading
-↓
-Imported
-↓
-Smart Scan
-↓
-Available
-
-The TV progress window provides:
-
-- Live download tracking
-- Queue visibility
-- Episode tracking
-- Smart scan status
-- Availability confirmation
-- Series information
+Follow TV content from Sonarr through download, import, queue-aware synchronization, smart scan processing, and final availability in your media server.
 
 ---
 
@@ -113,31 +73,29 @@ The TV progress window provides:
 
 ### Request Tracking
 
-MediaSync tracks requests from creation through download, import, scan, and availability.
+Track content from request through download, import, scan, and availability.
 
-### Download Visibility
+### Live Download Visibility
 
-Monitor supported download clients directly from MediaSync, including live progress percentages, status, speed, and download activity.
+Monitor supported download clients directly from MediaSync, including progress percentage, speed, ETA, status, and downloader activity.
 
 ### Availability Confirmation
 
-MediaSync verifies that content is actually available in your media server before reporting completion.
+MediaSync verifies that content is available in the media server before reporting completion.
 
 ### Immediate Movie Scans
 
-Movie imports trigger immediate library scans so new content appears quickly.
+Movie imports trigger immediate library scans so new content becomes available quickly.
 
-### Queue Aware TV Synchronization
+### Queue-Aware TV Synchronization
 
 TV imports are handled differently than movies.
 
-MediaSync performs an immediate scan on the first import, monitors the active queue, performs optional interim scans during active download sessions, and executes a final authoritative scan when the queue becomes empty.
-
-This keeps content available quickly without creating unnecessary scan activity during large download batches.
+MediaSync performs an initial scan after import, monitors active download queues, optionally performs interim scans during long-running download sessions, and executes a final scan when the queue becomes empty.
 
 ### Service Health Monitoring
 
-MediaSync monitors the health of connected services and displays status directly on the dashboard.
+Monitor connected services directly from the dashboard.
 
 Status indicators include:
 
@@ -148,28 +106,23 @@ Status indicators include:
 
 ### Multiple Instance Support
 
-MediaSync supports multiple instances of supported applications.
+Run multiple instances of supported applications while maintaining accurate tracking throughout the media pipeline.
 
-Requests, downloads, imports, scans, and availability tracking remain associated with the correct application instance throughout the process.
+### Rich Media Information
 
-### Library Statistics
+MediaSync enriches tracked content with information gathered from connected services, including:
 
-Monitor library totals directly from the dashboard.
-
-Library counts update automatically after successful scans.
+- Poster artwork
+- Quality profiles
+- Request source
+- Requester information
+- TMDB IDs
+- TVDB IDs
+- IMDB IDs
 
 ### Live Activity Feed
 
-Track events including:
-
-- Requests
-- Downloads
-- Imports
-- Movie scans
-- TV smart scans
-- Availability confirmation
-- Manual scans
-- Service events
+Track requests, downloads, imports, scans, availability events, and service activity as they happen.
 
 ### Authentication
 
@@ -177,7 +130,7 @@ MediaSync includes first-run account setup and session-based authentication.
 
 ### Progressive Web App
 
-MediaSync can be installed directly to mobile devices and used like a native application.
+Install MediaSync on mobile devices and use it like a native application.
 
 ---
 
@@ -212,13 +165,7 @@ Multiple instances are supported.
 
 ## Deployment
 
-MediaSync is designed for containerized deployment using Docker and Docker Compose.
-
-Example:
-
 ```yaml
-version: '3.8'
-
 services:
   mediasync:
     image: ghcr.io/dmesgnoise/mediasync:latest
@@ -243,12 +190,32 @@ docker compose up -d --build
 
 ## Future Plans
 
-- Additional Download Clients
+### Mobile Companion App
+
+A dedicated mobile companion app is planned for MediaSync.
+
+The goal is to provide visibility for both administrators and end users.
+
+Planned capabilities include:
+
+- Request status tracking
+- Download progress visibility
+- Availability notifications
+- Push notifications
+- Service health alerts
+- Queue monitoring
+- Remote administration features
+
+End users will be able to see where requested content is in the process without requiring access to Seerr, Radarr, Sonarr, or download clients.
+
+### Additional Roadmap Items
+
 - Unmanic Integration
 - Tdarr Integration
 - Transcoding Visibility
-- Space Savings Tracking
-- Additional Themes and UI Customization
+- Storage Savings Tracking
+- Additional Themes
+- Additional UI Customization
 
 ---
 
