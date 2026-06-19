@@ -956,9 +956,16 @@ def _find_configured_library(library_id):
     return None, None
 
 
-def _library_count_item_type(library):
+def _library_count_item_type(library, source=None):
+    source_type = str((source or {}).get("source_type") or "").strip().lower()
     library_type = str((library or {}).get("library_type") or "").strip().lower()
     library_name = str((library or {}).get("library_name") or "").strip().lower()
+
+    if source_type == "sonarr":
+        return "Series", "Shows"
+
+    if source_type == "radarr":
+        return "Movie", "Movies"
 
     if library_type in {"tvshows", "tv", "series", "shows"} or "tv" in library_name or "show" in library_name:
         return "Series", "Shows"
@@ -1021,7 +1028,7 @@ def _dashboard_library_count_payload(library_id):
 
     media_server = get_media_server()
     server_type = str((media_server or {}).get("server_type") or "").strip().lower()
-    item_type, label_type = _library_count_item_type(library)
+    item_type, label_type = _library_count_item_type(library, source)
 
     if server_type not in {"emby", "jellyfin"}:
         return {
