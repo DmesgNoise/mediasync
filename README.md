@@ -1,11 +1,6 @@
 <p align="center">
-  <img src="app/static/img/default.png" alt="MediaSync" width="72">
-  <img src="app/static/img/emby.png" alt="Emby" width="72">
-  <img src="app/static/img/plex.png" alt="Plex" width="72">
-  <img src="app/static/img/jellyfin.png" alt="Jellyfin" width="72">
+  <img src="app/static/img/mediasync-logo.png" alt="MediaSync">
 </p>
-
-<h1 align="center">MediaSync</h1>
 
 <p align="center">
   <strong>Media Pipeline Visibility and Automation</strong>
